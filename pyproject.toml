@@ -1,0 +1,119 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eol-cli"
+version = "0.1.0"
+description = "CLI tool for endoflife.date API - Check EOL dates and support lifecycles"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Marc Rivero", email = "mriverolopez@gmail.com"}
+]
+maintainers = [
+    {name = "Marc Rivero", email = "mriverolopez@gmail.com"}
+]
+keywords = ["eol", "endoflife", "cli", "api", "security", "pentest"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+    "build>=1.0.0",
+    "twine>=6.0.0",
+    "pre-commit>=3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/seifreed/eol-cli"
+Repository = "https://github.com/seifreed/eol-cli"
+Issues = "https://github.com/seifreed/eol-cli/issues"
+Documentation = "https://github.com/seifreed/eol-cli#readme"
+
+[project.scripts]
+eol-cli = "eol_cli.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["eol_cli*"]
+exclude = ["tests*", "docs*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312", "py313", "py314"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "api: tests that make real API calls",
+    "cli: tests for CLI commands",
+    "formatters: tests for output formatters"
+]
+
+[tool.coverage.run]
+source = ["eol_cli"]
+omit = ["*/tests/*", "*/venv/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+
