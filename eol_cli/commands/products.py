@@ -32,7 +32,9 @@ def products(ctx: click.Context) -> None:
 @click.option("--full", is_flag=True, help="Get full product details (includes all releases)")
 @format_options
 @click.pass_context
-def list_products(ctx: click.Context, full: bool, output_json: bool, output_xml: bool) -> None:
+def list_products(
+    ctx: click.Context, full: bool, output_json: bool, output_xml: bool, output_sarif: bool
+) -> None:
     """List all products.
 
     By default, returns a summary of each product. Use --full to get
@@ -42,8 +44,9 @@ def list_products(ctx: click.Context, full: bool, output_json: bool, output_xml:
         eol products list
         eol products list --full
         eol products list --json
+        eol products list --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         if full:
@@ -51,7 +54,7 @@ def list_products(ctx: click.Context, full: bool, output_json: bool, output_xml:
         else:
             data = client.list_products()
 
-        emit(data, output_json, output_xml, format_product_list, full=full)
+        emit(data, output_json, output_xml, format_product_list, output_sarif=output_sarif, full=full)
 
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
@@ -145,7 +148,12 @@ def _handle_errors_and_suggestions(
 @format_options
 @click.pass_context
 def get_product(
-    ctx: click.Context, product_names: str, output_json: bool, output_xml: bool, show_all: bool
+    ctx: click.Context,
+    product_names: str,
+    output_json: bool,
+    output_xml: bool,
+    output_sarif: bool,
+    show_all: bool,
 ) -> None:
     """Get detailed information about one or more products.
 
@@ -159,9 +167,9 @@ def get_product(
         eol-cli products get python --all
         eol-cli products get fortinet,apache
         eol-cli products get ubuntu,python,nodejs --json
-        eol-cli products get apache,nginx --xml
+        eol-cli products get apache,nginx --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
 
     product_list = [p.strip() for p in product_names.split(",") if p.strip()]
 
@@ -174,11 +182,11 @@ def get_product(
         all_data, errors, not_found = _fetch_products(client, product_list)
         _handle_errors_and_suggestions(client, errors, not_found, all_data)
 
-        # For JSON/XML: aggregate multi-product results into a single datum and use emit().
+        # For structured formats: aggregate multi-product results and use emit().
         # For Rich: iterate with separators (cannot be expressed as a single emit call).
-        if output_json or output_xml:
+        if output_json or output_xml or output_sarif:
             data = all_data[0] if len(all_data) == 1 else _create_aggregated_response(all_data)
-            emit(data, output_json, output_xml, format_product_details)
+            emit(data, output_json, output_xml, format_product_details, output_sarif=output_sarif)
         else:
             _output_rich_format(all_data, show_all)
 
@@ -195,7 +203,12 @@ def get_product(
 @format_options
 @click.pass_context
 def get_release(
-    ctx: click.Context, product: str, release: str, output_json: bool, output_xml: bool
+    ctx: click.Context,
+    product: str,
+    release: str,
+    output_json: bool,
+    output_xml: bool,
+    output_sarif: bool,
 ) -> None:
     """Get information about a specific product release cycle.
 
@@ -208,9 +221,9 @@ def get_release(
         eol-cli products release python 3.11
         eol-cli products release ubuntu latest
         eol-cli products release python latest --json
-        eol-cli products release python latest --xml
+        eol-cli products release python latest --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         if release.lower() == "latest":
@@ -218,7 +231,7 @@ def get_release(
         else:
             data = client.get_product_release(product, release)
 
-        emit(data, output_json, output_xml, format_release_details)
+        emit(data, output_json, output_xml, format_release_details, output_sarif=output_sarif)
 
     except EOLNotFoundError:
         if release.lower() == "latest":

@@ -17,19 +17,22 @@ def categories(ctx: click.Context) -> None:
 @categories.command(name="list")
 @format_options
 @click.pass_context
-def list_categories(ctx: click.Context, output_json: bool, output_xml: bool) -> None:
+def list_categories(
+    ctx: click.Context, output_json: bool, output_xml: bool, output_sarif: bool
+) -> None:
     """List all available categories.
 
     Examples:
         eol-cli categories list
         eol-cli categories list --json
         eol-cli categories list --xml
+        eol-cli categories list --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         data = client.list_categories()
-        emit(data, output_json, output_xml, format_uri_list)
+        emit(data, output_json, output_xml, format_uri_list, output_sarif=output_sarif)
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
         raise click.Abort() from None
@@ -39,7 +42,9 @@ def list_categories(ctx: click.Context, output_json: bool, output_xml: bool) -> 
 @click.argument("category")
 @format_options
 @click.pass_context
-def get_category(ctx: click.Context, category: str, output_json: bool, output_xml: bool) -> None:
+def get_category(
+    ctx: click.Context, category: str, output_json: bool, output_xml: bool, output_sarif: bool
+) -> None:
     """Get all products in a specific category.
 
     CATEGORY: The category name (e.g., 'os', 'app', 'framework', 'server-app')
@@ -48,13 +53,13 @@ def get_category(ctx: click.Context, category: str, output_json: bool, output_xm
         eol-cli categories get os
         eol-cli categories get framework
         eol-cli categories get database --json
-        eol-cli categories get os --xml
+        eol-cli categories get os --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         data = client.get_category_products(category)
-        emit(data, output_json, output_xml, format_product_list)
+        emit(data, output_json, output_xml, format_product_list, output_sarif=output_sarif)
     except EOLNotFoundError:
         click.echo(f"Error: Category '{category}' not found", err=True)
         click.echo(

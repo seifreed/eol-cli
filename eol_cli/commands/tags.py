@@ -17,19 +17,21 @@ def tags(ctx: click.Context) -> None:
 @tags.command(name="list")
 @format_options
 @click.pass_context
-def list_tags(ctx: click.Context, output_json: bool, output_xml: bool) -> None:
+def list_tags(
+    ctx: click.Context, output_json: bool, output_xml: bool, output_sarif: bool
+) -> None:
     """List all available tags.
 
     Examples:
         eol-cli tags list
         eol-cli tags list --json
-        eol-cli tags list --xml
+        eol-cli tags list --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         data = client.list_tags()
-        emit(data, output_json, output_xml, format_uri_list)
+        emit(data, output_json, output_xml, format_uri_list, output_sarif=output_sarif)
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
         raise click.Abort() from None
@@ -39,7 +41,9 @@ def list_tags(ctx: click.Context, output_json: bool, output_xml: bool) -> None:
 @click.argument("tag")
 @format_options
 @click.pass_context
-def get_tag(ctx: click.Context, tag: str, output_json: bool, output_xml: bool) -> None:
+def get_tag(
+    ctx: click.Context, tag: str, output_json: bool, output_xml: bool, output_sarif: bool
+) -> None:
     """Get all products with a specific tag.
 
     TAG: The tag name (e.g., 'linux', 'database', 'google')
@@ -48,13 +52,13 @@ def get_tag(ctx: click.Context, tag: str, output_json: bool, output_xml: bool) -
         eol-cli tags get linux
         eol-cli tags get database
         eol-cli tags get microsoft --json
-        eol-cli tags get linux-distribution --xml
+        eol-cli tags get linux-distribution --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         data = client.get_tag_products(tag)
-        emit(data, output_json, output_xml, format_product_list)
+        emit(data, output_json, output_xml, format_product_list, output_sarif=output_sarif)
     except EOLNotFoundError:
         click.echo(f"Error: Tag '{tag}' not found", err=True)
         click.echo("Tip: Use 'eol-cli tags list' to see available tags", err=True)

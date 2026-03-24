@@ -9,10 +9,12 @@ from eol_cli.formatters.rich_formatter import (
     format_release_details,
     format_uri_list,
 )
+from eol_cli.formatters.sarif_formatter import format_sarif
 from eol_cli.formatters.xml_formatter import format_xml
 
 __all__ = [
     "format_json",
+    "format_sarif",
     "format_xml",
     "format_uri_list",
     "format_product_list",

@@ -17,7 +17,9 @@ def identifiers(ctx: click.Context) -> None:
 @identifiers.command(name="list")
 @format_options
 @click.pass_context
-def list_identifier_types(ctx: click.Context, output_json: bool, output_xml: bool) -> None:
+def list_identifier_types(
+    ctx: click.Context, output_json: bool, output_xml: bool, output_sarif: bool
+) -> None:
     """List all available identifier types.
 
     Common identifier types include: purl, cpe, repology
@@ -25,13 +27,13 @@ def list_identifier_types(ctx: click.Context, output_json: bool, output_xml: boo
     Examples:
         eol-cli identifiers list
         eol-cli identifiers list --json
-        eol-cli identifiers list --xml
+        eol-cli identifiers list --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         data = client.list_identifier_types()
-        emit(data, output_json, output_xml, format_uri_list)
+        emit(data, output_json, output_xml, format_uri_list, output_sarif=output_sarif)
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
         raise click.Abort() from None
@@ -42,7 +44,7 @@ def list_identifier_types(ctx: click.Context, output_json: bool, output_xml: boo
 @format_options
 @click.pass_context
 def get_identifiers(
-    ctx: click.Context, identifier_type: str, output_json: bool, output_xml: bool
+    ctx: click.Context, identifier_type: str, output_json: bool, output_xml: bool, output_sarif: bool
 ) -> None:
     """Get all identifiers for a specific type.
 
@@ -52,13 +54,13 @@ def get_identifiers(
         eol-cli identifiers get purl
         eol-cli identifiers get cpe
         eol-cli identifiers get repology --json
-        eol-cli identifiers get purl --xml
+        eol-cli identifiers get purl --sarif
     """
-    validate_format_options(output_json, output_xml)
+    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
     try:
         data = client.get_identifiers_by_type(identifier_type)
-        emit(data, output_json, output_xml, format_identifier_list)
+        emit(data, output_json, output_xml, format_identifier_list, output_sarif=output_sarif)
     except EOLNotFoundError:
         click.echo(f"Error: Identifier type '{identifier_type}' not found", err=True)
         click.echo("Tip: Use 'eol-cli identifiers list' to see available types", err=True)
