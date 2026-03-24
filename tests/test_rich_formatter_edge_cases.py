@@ -213,27 +213,14 @@ class TestProductsCommandEdgeCases:
 
 @pytest.mark.api
 class TestAPIClientLinesCoverage:
-    """Test specific API client lines that need coverage."""
+    """Test API client error paths with real requests."""
 
-    def test_rate_limit_error_line_70_71(self):
-        from eol_cli.api.client import EOLRateLimitError
-
-        error = EOLRateLimitError("Rate limit exceeded. Retry after: 60 seconds")
-        assert "60 seconds" in str(error)
-        assert isinstance(error, Exception)
-
-    def test_http_error_handling_line_81(self):
+    def test_not_found_error_raises_for_unknown_product(self):
         from eol_cli.api.client import EOLNotFoundError
 
         with EOLClient() as client:
             with pytest.raises(EOLNotFoundError):
                 client.get_product("this-absolutely-does-not-exist-xyz-123-456")
-
-    def test_json_value_error_line_85(self):
-        from eol_cli.api.client import EOLAPIError
-
-        error = EOLAPIError("Invalid JSON response: error")
-        assert "Invalid JSON" in str(error)
 
 
 class TestCLIMainFunction:

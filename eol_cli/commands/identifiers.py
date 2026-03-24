@@ -41,7 +41,9 @@ def list_identifier_types(ctx: click.Context, output_json: bool, output_xml: boo
 @click.argument("identifier_type")
 @format_options
 @click.pass_context
-def get_identifiers(ctx: click.Context, identifier_type: str, output_json: bool, output_xml: bool) -> None:
+def get_identifiers(
+    ctx: click.Context, identifier_type: str, output_json: bool, output_xml: bool
+) -> None:
     """Get all identifiers for a specific type.
 
     IDENTIFIER_TYPE: The identifier type (e.g., 'purl', 'cpe', 'repology')

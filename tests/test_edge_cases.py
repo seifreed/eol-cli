@@ -66,11 +66,9 @@ class TestCLIErrorHandling:
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
-    def test_products_list_api_error(self):
-        """Test products list with API error."""
+    def test_products_list_help_output(self):
+        """Test products list help shows expected content."""
         runner = CliRunner()
-        # The CLI doesn't accept --base-url as a global option
-        # Test the error handling by verifying the command structure
         result = runner.invoke(main, ["products", "list", "--help"])
         assert result.exit_code == 0
         assert "list" in result.output.lower()
