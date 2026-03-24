@@ -70,25 +70,27 @@ class EOLClient:
         """
         url = f"{self.base_url}{endpoint}"
 
+        # 1. Network request — catch transport-level failures
         try:
             response = self.session.get(url, timeout=self.timeout)
-
-            # Handle specific status codes
-            if response.status_code == 404:
-                raise EOLNotFoundError(f"Resource not found: {endpoint}")
-            elif response.status_code == 429:
-                retry_after = response.headers.get("Retry-After", "unknown")
-                raise EOLRateLimitError(f"Rate limit exceeded. Retry after: {retry_after} seconds")
-
-            # Raise for other HTTP errors
-            response.raise_for_status()
-
-            return response.json()
-
-        except HTTPError as e:
-            raise EOLAPIError(f"HTTP error occurred: {e}") from e
         except RequestException as e:
             raise EOLAPIError(f"Request failed: {e}") from e
+
+        # 2. Status-code dispatch — raise typed exceptions for known codes
+        if response.status_code == 404:
+            raise EOLNotFoundError(f"Resource not found: {endpoint}")
+        if response.status_code == 429:
+            retry_after = response.headers.get("Retry-After", "unknown")
+            raise EOLRateLimitError(
+                f"Rate limit exceeded. Retry after: {retry_after} seconds"
+            )
+
+        # 3. HTTP error check + JSON deserialization
+        try:
+            response.raise_for_status()
+            return response.json()
+        except HTTPError as e:
+            raise EOLAPIError(f"HTTP error occurred: {e}") from e
         except (JSONDecodeError, ValueError) as e:
             raise EOLAPIError(f"Invalid JSON response: {e}") from e
 

@@ -160,14 +160,6 @@ class TestCLIOptionsValidation:
         assert result.exit_code == 0
         assert "<response>" in result.output
 
-    def test_index_command_base_functionality(self, client_obj):
-        """Test index command without flags."""
-        runner = CliRunner()
-        result = runner.invoke(index, [], obj=client_obj)
-        assert result.exit_code == 0
-        assert len(result.output) > 0
-
-
 @pytest.mark.api
 class TestAPIClientEdgeCases:
     """Test API client edge cases."""

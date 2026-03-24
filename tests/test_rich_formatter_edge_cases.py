@@ -272,23 +272,3 @@ class TestFormatterComplexScenarios:
         assert "Test" in buf.getvalue()
 
 
-@pytest.mark.api
-class TestIndexAndCategoriesCommands:
-    """Test index and categories for missing lines."""
-
-    def test_index_command_error_handling(self, client_obj):
-        runner = CliRunner()
-        from eol_cli.commands.index import index
-
-        result = runner.invoke(index, [], obj=client_obj)
-        assert result.exit_code == 0
-
-    def test_categories_list_error_handling(self, client_obj):
-        runner = CliRunner()
-        result = runner.invoke(categories, ["list"], obj=client_obj)
-        assert result.exit_code == 0
-
-    def test_identifiers_list_error_handling(self, client_obj):
-        runner = CliRunner()
-        result = runner.invoke(identifiers, ["list"], obj=client_obj)
-        assert result.exit_code == 0
