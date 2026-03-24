@@ -1,6 +1,15 @@
 """Fuzzy search utilities for finding similar product names."""
 
 
+def _get_ngrams(s: str, n: int) -> set[str]:
+    """Generate character n-grams from *s*.
+
+    Returns an empty set when ``len(s) < n`` (no complete n-gram fits).
+    """
+    s = s.lower()
+    return {s[i : i + n] for i in range(len(s) - n + 1)}
+
+
 def _levenshtein_distance(s1: str, s2: str) -> int:
     """Calculate Levenshtein distance between two strings.
 
@@ -12,7 +21,7 @@ def _levenshtein_distance(s1: str, s2: str) -> int:
         The minimum number of single-character edits required to change s1 into s2
     """
     if len(s1) < len(s2):
-        return _levenshtein_distance(s2, s1)
+        s1, s2 = s2, s1
 
     if len(s2) == 0:
         return len(s1)
@@ -45,13 +54,8 @@ def _jaccard_similarity(s1: str, s2: str, n: int = 2) -> float:
     if not s1 or not s2:
         return 0.0
 
-    def get_ngrams(s: str, n: int) -> set:
-        """Generate n-grams from a string."""
-        s = s.lower()
-        return {s[i : i + n] for i in range(len(s) - n + 1)} if len(s) >= n else {s}
-
-    ngrams1 = get_ngrams(s1, n)
-    ngrams2 = get_ngrams(s2, n)
+    ngrams1 = _get_ngrams(s1, n)
+    ngrams2 = _get_ngrams(s2, n)
 
     if not ngrams1 or not ngrams2:
         return 0.0

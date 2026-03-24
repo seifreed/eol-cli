@@ -2,20 +2,22 @@
 
 import click
 
-from eol_cli.api.client import EOLAPIError, EOLClient, EOLNotFoundError
-from eol_cli.formatters import format_json, format_product_list, format_uri_list, format_xml
+from eol_cli.api.client import EOLAPIError, EOLNotFoundError
+from eol_cli.commands._output import emit, format_options, validate_format_options
+from eol_cli.formatters import format_product_list, format_uri_list
 
 
 @click.group(name="categories")
-def categories():
+@click.pass_context
+def categories(ctx: click.Context) -> None:
     """Query for products by category."""
     pass
 
 
 @categories.command(name="list")
-@click.option("--json", "output_json", is_flag=True, help="Output in JSON format")
-@click.option("--xml", "output_xml", is_flag=True, help="Output in XML format")
-def list_categories(output_json: bool, output_xml: bool):
+@format_options
+@click.pass_context
+def list_categories(ctx: click.Context, output_json: bool, output_xml: bool) -> None:
     """List all available categories.
 
     Examples:
@@ -23,34 +25,21 @@ def list_categories(output_json: bool, output_xml: bool):
         eol-cli categories list --json
         eol-cli categories list --xml
     """
-    if output_json and output_xml:
-        click.echo("Error: --json and --xml are mutually exclusive", err=True)
-        raise click.Abort() from None
-
-    client = EOLClient()
-
+    validate_format_options(output_json, output_xml)
+    client = ctx.obj["client"]
     try:
         data = client.list_categories()
-
-        if output_json:
-            click.echo(format_json(data))
-        elif output_xml:
-            click.echo(format_xml(data))
-        else:
-            format_uri_list(data)
-
+        emit(data, output_json, output_xml, format_uri_list)
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
         raise click.Abort() from None
-    finally:
-        client.close()
 
 
 @categories.command(name="get")
 @click.argument("category")
-@click.option("--json", "output_json", is_flag=True, help="Output in JSON format")
-@click.option("--xml", "output_xml", is_flag=True, help="Output in XML format")
-def get_category(category: str, output_json: bool, output_xml: bool):
+@format_options
+@click.pass_context
+def get_category(ctx: click.Context, category: str, output_json: bool, output_xml: bool) -> None:
     """Get all products in a specific category.
 
     CATEGORY: The category name (e.g., 'os', 'app', 'framework', 'server-app')
@@ -61,28 +50,17 @@ def get_category(category: str, output_json: bool, output_xml: bool):
         eol-cli categories get database --json
         eol-cli categories get os --xml
     """
-    if output_json and output_xml:
-        click.echo("Error: --json and --xml are mutually exclusive", err=True)
-        raise click.Abort() from None
-
-    client = EOLClient()
-
+    validate_format_options(output_json, output_xml)
+    client = ctx.obj["client"]
     try:
         data = client.get_category_products(category)
-
-        if output_json:
-            click.echo(format_json(data))
-        elif output_xml:
-            click.echo(format_xml(data))
-        else:
-            format_product_list(data)
-
+        emit(data, output_json, output_xml, format_product_list)
     except EOLNotFoundError:
         click.echo(f"Error: Category '{category}' not found", err=True)
-        click.echo("Tip: Use 'eol-cli categories list' to see available categories", err=True)
+        click.echo(
+            "Tip: Use 'eol-cli categories list' to see available categories", err=True
+        )
         raise click.Abort() from None
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
         raise click.Abort() from None
-    finally:
-        client.close()

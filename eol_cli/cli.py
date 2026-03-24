@@ -2,14 +2,16 @@
 
 import click
 
-from eol_cli import __version__
+from eol_cli._version import __version__
+from eol_cli.api.client import EOLClient
 from eol_cli.commands import categories, identifiers, index, products, tags
 
 
 @click.group()
 @click.version_option(version=__version__, prog_name="eol-cli")
 @click.help_option("-h", "--help")
-def main():
+@click.pass_context
+def main(ctx: click.Context) -> None:
     """EOL CLI - Command-line interface for endoflife.date API.
 
     Query end-of-life dates and support lifecycles for various products.
@@ -35,7 +37,10 @@ def main():
         GitHub: https://github.com/seifreed/eol-cli
         API:    https://endoflife.date/docs/api/
     """
-    pass
+    ctx.ensure_object(dict)
+    client = EOLClient()
+    ctx.obj["client"] = client
+    ctx.call_on_close(client.close)
 
 
 # Register command groups

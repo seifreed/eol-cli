@@ -3,6 +3,7 @@
 import json
 import xml.etree.ElementTree as ET
 
+import pytest
 from click.testing import CliRunner
 
 from eol_cli.cli import main
@@ -17,7 +18,6 @@ class TestMainCLI:
     """Test main CLI entry point."""
 
     def test_main_help(self):
-        """Test main --help command."""
         runner = CliRunner()
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
@@ -25,104 +25,90 @@ class TestMainCLI:
         assert "Output Formats" in result.output
 
     def test_main_version(self):
-        """Test --version flag."""
         runner = CliRunner()
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
         assert "0.1.0" in result.output
 
 
+@pytest.mark.api
 class TestProductsCommands:
     """Test products commands."""
 
-    def test_products_list(self):
-        """Test products list command."""
+    def test_products_list(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["list"])
+        result = runner.invoke(products, ["list"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_products_list_json(self):
-        """Test products list with JSON output."""
+    def test_products_list_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["list", "--json"])
+        result = runner.invoke(products, ["list", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
-        # Validate JSON
         data = json.loads(result.output)
         assert "schema_version" in data
         assert "total" in data
         assert "result" in data
 
-    def test_products_list_xml(self):
-        """Test products list with XML output."""
+    def test_products_list_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["list", "--xml"])
+        result = runner.invoke(products, ["list", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
-        # Validate XML
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_products_list_json_xml_exclusive(self):
-        """Test that --json and --xml are mutually exclusive."""
+    def test_products_list_json_xml_exclusive(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["list", "--json", "--xml"])
-        assert result.exit_code == 1
+        result = runner.invoke(products, ["list", "--json", "--xml"], obj=client_obj)
+        assert result.exit_code == 2
         assert "mutually exclusive" in result.output
 
-    def test_products_list_full(self):
-        """Test products list --full command."""
+    def test_products_list_full(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["list", "--full"])
+        result = runner.invoke(products, ["list", "--full"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_products_get_single(self):
-        """Test products get with single product."""
+    def test_products_get_single(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python"])
+        result = runner.invoke(products, ["get", "python"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_products_get_single_all(self):
-        """Test products get with --all flag."""
+    def test_products_get_single_all(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python", "--all"])
+        result = runner.invoke(products, ["get", "python", "--all"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_products_get_single_json(self):
-        """Test products get with JSON output."""
+    def test_products_get_single_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python", "--json"])
+        result = runner.invoke(products, ["get", "python", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert data["result"]["name"] == "python"
 
-    def test_products_get_single_xml(self):
-        """Test products get with XML output."""
+    def test_products_get_single_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python", "--xml"])
+        result = runner.invoke(products, ["get", "python", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_products_get_multiple(self):
-        """Test products get with multiple products."""
+    def test_products_get_multiple(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python,nodejs"])
+        result = runner.invoke(products, ["get", "python,nodejs"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
-        # Should have separator between products
         assert "=" in result.output
 
-    def test_products_get_multiple_json(self):
-        """Test products get multiple with JSON output."""
+    def test_products_get_multiple_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python,nodejs", "--json"])
+        result = runner.invoke(products, ["get", "python,nodejs", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
@@ -131,289 +117,258 @@ class TestProductsCommands:
         assert "products" in data
         assert len(data["products"]) == 2
 
-    def test_products_get_multiple_xml(self):
-        """Test products get multiple with XML output."""
+    def test_products_get_multiple_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python,nodejs", "--xml"])
+        result = runner.invoke(products, ["get", "python,nodejs", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         total = root.find("total")
         assert total.text == "2"
 
-    def test_products_get_with_invalid_product(self):
-        """Test products get with invalid product."""
+    def test_products_get_with_invalid_product(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "nonexistent-product-xyz-123"])
+        result = runner.invoke(products, ["get", "nonexistent-product-xyz-123"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
-    def test_products_get_mixed_valid_invalid(self):
-        """Test products get with mix of valid and invalid products."""
+    def test_products_get_mixed_valid_invalid(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python,invalid-xyz,nodejs"])
-        # Should show warning but continue with valid products
+        result = runner.invoke(products, ["get", "python,invalid-xyz,nodejs"], obj=client_obj)
         assert "Warning" in result.output
         assert "invalid-xyz" in result.output
 
-    def test_products_release(self):
-        """Test products release command."""
+    def test_products_release(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["release", "python", "3.11"])
+        result = runner.invoke(products, ["release", "python", "3.11"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_products_release_latest(self):
-        """Test products release latest."""
+    def test_products_release_latest(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["release", "python", "latest"])
+        result = runner.invoke(products, ["release", "python", "latest"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_products_release_json(self):
-        """Test products release with JSON output."""
+    def test_products_release_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["release", "python", "latest", "--json"])
+        result = runner.invoke(products, ["release", "python", "latest", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "result" in data
         assert "name" in data["result"]
 
-    def test_products_release_xml(self):
-        """Test products release with XML output."""
+    def test_products_release_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["release", "python", "latest", "--xml"])
+        result = runner.invoke(products, ["release", "python", "latest", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_products_release_not_found(self):
-        """Test products release with invalid release."""
+    def test_products_release_not_found(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["release", "python", "99.99"])
+        result = runner.invoke(products, ["release", "python", "99.99"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
 
+@pytest.mark.api
 class TestCategoriesCommands:
     """Test categories commands."""
 
-    def test_categories_list(self):
-        """Test categories list command."""
+    def test_categories_list(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["list"])
+        result = runner.invoke(categories, ["list"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_categories_list_json(self):
-        """Test categories list with JSON output."""
+    def test_categories_list_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["list", "--json"])
+        result = runner.invoke(categories, ["list", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "total" in data
         assert "result" in data
 
-    def test_categories_list_xml(self):
-        """Test categories list with XML output."""
+    def test_categories_list_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["list", "--xml"])
+        result = runner.invoke(categories, ["list", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_categories_get(self):
-        """Test categories get command."""
+    def test_categories_get(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["get", "os"])
+        result = runner.invoke(categories, ["get", "os"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_categories_get_json(self):
-        """Test categories get with JSON output."""
+    def test_categories_get_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["get", "os", "--json"])
+        result = runner.invoke(categories, ["get", "os", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "result" in data
-        # All products should be in 'os' category
         for product in data["result"]:
             assert product["category"] == "os"
 
-    def test_categories_get_xml(self):
-        """Test categories get with XML output."""
+    def test_categories_get_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["get", "os", "--xml"])
+        result = runner.invoke(categories, ["get", "os", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_categories_get_not_found(self):
-        """Test categories get with invalid category."""
+    def test_categories_get_not_found(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(categories, ["get", "invalid-category-xyz"])
+        result = runner.invoke(categories, ["get", "invalid-category-xyz"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
 
+@pytest.mark.api
 class TestTagsCommands:
     """Test tags commands."""
 
-    def test_tags_list(self):
-        """Test tags list command."""
+    def test_tags_list(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["list"])
+        result = runner.invoke(tags, ["list"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_tags_list_json(self):
-        """Test tags list with JSON output."""
+    def test_tags_list_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["list", "--json"])
+        result = runner.invoke(tags, ["list", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "total" in data
         assert "result" in data
 
-    def test_tags_list_xml(self):
-        """Test tags list with XML output."""
+    def test_tags_list_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["list", "--xml"])
+        result = runner.invoke(tags, ["list", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_tags_get(self):
-        """Test tags get command."""
+    def test_tags_get(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["get", "linux-distribution"])
+        result = runner.invoke(tags, ["get", "linux-distribution"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_tags_get_json(self):
-        """Test tags get with JSON output."""
+    def test_tags_get_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["get", "linux-distribution", "--json"])
+        result = runner.invoke(tags, ["get", "linux-distribution", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "result" in data
-        # All products should have the tag
         for product in data["result"]:
             assert "linux-distribution" in product["tags"]
 
-    def test_tags_get_xml(self):
-        """Test tags get with XML output."""
+    def test_tags_get_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["get", "linux-distribution", "--xml"])
+        result = runner.invoke(tags, ["get", "linux-distribution", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_tags_get_not_found(self):
-        """Test tags get with invalid tag."""
+    def test_tags_get_not_found(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(tags, ["get", "invalid-tag-xyz-123"])
+        result = runner.invoke(tags, ["get", "invalid-tag-xyz-123"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
 
+@pytest.mark.api
 class TestIdentifiersCommands:
     """Test identifiers commands."""
 
-    def test_identifiers_list(self):
-        """Test identifiers list command."""
+    def test_identifiers_list(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["list"])
+        result = runner.invoke(identifiers, ["list"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_identifiers_list_json(self):
-        """Test identifiers list with JSON output."""
+    def test_identifiers_list_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["list", "--json"])
+        result = runner.invoke(identifiers, ["list", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "total" in data
         assert "result" in data
 
-    def test_identifiers_list_xml(self):
-        """Test identifiers list with XML output."""
+    def test_identifiers_list_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["list", "--xml"])
+        result = runner.invoke(identifiers, ["list", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_identifiers_get(self):
-        """Test identifiers get command."""
+    def test_identifiers_get(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["get", "purl"])
+        result = runner.invoke(identifiers, ["get", "purl"], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_identifiers_get_json(self):
-        """Test identifiers get with JSON output."""
+    def test_identifiers_get_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["get", "purl", "--json"])
+        result = runner.invoke(identifiers, ["get", "purl", "--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "result" in data
         assert len(data["result"]) > 0
 
-    def test_identifiers_get_xml(self):
-        """Test identifiers get with XML output."""
+    def test_identifiers_get_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["get", "purl", "--xml"])
+        result = runner.invoke(identifiers, ["get", "purl", "--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)
         assert root.tag == "response"
 
-    def test_identifiers_get_not_found(self):
-        """Test identifiers get with invalid type."""
+    def test_identifiers_get_not_found(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["get", "invalid-type-xyz"])
+        result = runner.invoke(identifiers, ["get", "invalid-type-xyz"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
 
+@pytest.mark.api
 class TestIndexCommand:
     """Test index command."""
 
-    def test_index(self):
-        """Test index command."""
+    def test_index(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(index, [])
+        result = runner.invoke(index, [], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
-    def test_index_json(self):
-        """Test index with JSON output."""
+    def test_index_json(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(index, ["--json"])
+        result = runner.invoke(index, ["--json"], obj=client_obj)
         assert result.exit_code == 0
 
         data = json.loads(result.output)
         assert "total" in data
         assert "result" in data
 
-    def test_index_xml(self):
-        """Test index with XML output."""
+    def test_index_xml(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(index, ["--xml"])
+        result = runner.invoke(index, ["--xml"], obj=client_obj)
         assert result.exit_code == 0
 
         root = ET.fromstring(result.output)

@@ -69,9 +69,9 @@ class TestJaccardSimilarity:
         assert _jaccard_similarity("WINDOWS", "windows") == 1.0
 
     def test_single_character_strings(self):
-        """Test Jaccard similarity with single character strings."""
+        """Test Jaccard similarity with single character strings (shorter than bigram n=2)."""
         similarity = _jaccard_similarity("a", "a")
-        assert similarity == 1.0
+        assert similarity == 0.0  # No bigrams possible for single-char strings
 
 
 class TestCombinedSimilarity:

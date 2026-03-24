@@ -2,33 +2,21 @@
 
 import click
 
-from eol_cli.api.client import EOLAPIError, EOLClient
-from eol_cli.formatters import format_json, format_uri_list, format_xml
+from eol_cli.api.client import EOLAPIError
+from eol_cli.commands._output import emit, format_options, validate_format_options
+from eol_cli.formatters import format_uri_list
 
 
 @click.command(name="index")
-@click.option("--json", "output_json", is_flag=True, help="Output in JSON format")
-@click.option("--xml", "output_xml", is_flag=True, help="Output in XML format")
-def index(output_json: bool, output_xml: bool):
+@format_options
+@click.pass_context
+def index(ctx: click.Context, output_json: bool, output_xml: bool) -> None:
     """Get the API index with main endpoints."""
-    if output_json and output_xml:
-        click.echo("Error: --json and --xml are mutually exclusive", err=True)
-        raise click.Abort() from None
-
-    client = EOLClient()
-
+    validate_format_options(output_json, output_xml)
+    client = ctx.obj["client"]
     try:
         data = client.get_index()
-
-        if output_json:
-            click.echo(format_json(data))
-        elif output_xml:
-            click.echo(format_xml(data))
-        else:
-            format_uri_list(data)
-
+        emit(data, output_json, output_xml, format_uri_list)
     except EOLAPIError as e:
         click.echo(f"Error: {e}", err=True)
         raise click.Abort() from None
-    finally:
-        client.close()

@@ -8,18 +8,14 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-console = Console()
+_default_console = Console()
+_default_stderr_console = Console(stderr=True)
+
+_MAX_TAGS_DISPLAYED = 3
 
 
 def _format_date(date_str: str | None) -> str:
-    """Format a date string for display.
-
-    Args:
-        date_str: ISO date string or None
-
-    Returns:
-        Formatted date or "N/A"
-    """
+    """Format a date string for display."""
     if not date_str:
         return "[dim]N/A[/dim]"
 
@@ -31,47 +27,27 @@ def _format_date(date_str: str | None) -> str:
 
 
 def _format_boolean(value: bool, true_label: str = "Yes", false_label: str = "No") -> str:
-    """Format a boolean value with colors.
-
-    Args:
-        value: Boolean value
-        true_label: Label for True
-        false_label: Label for False
-
-    Returns:
-        Colored formatted string
-    """
+    """Format a boolean value with colors."""
     if value:
         return f"[green]{true_label}[/green]"
     return f"[dim]{false_label}[/dim]"
 
 
 def _format_eol_status(is_eol: bool, eol_from: str | None) -> str:
-    """Format EOL status with color coding.
-
-    Args:
-        is_eol: Whether the product is EOL
-        eol_from: EOL date
-
-    Returns:
-        Colored formatted string
-    """
+    """Format EOL status with color coding."""
     if is_eol:
         return f"[red]EOL[/red] ({_format_date(eol_from)})"
     return f"[green]Active[/green] (EOL: {_format_date(eol_from)})"
 
 
-def format_uri_list(data: dict[str, Any]) -> None:
-    """Format and print a list of URIs.
-
-    Args:
-        data: Response containing URIs
-    """
+def format_uri_list(data: dict[str, Any], *, console: Console | None = None) -> None:
+    """Format and print a list of URIs."""
+    c = console or _default_console
     result = data.get("result", [])
     total = data.get("total", len(result))
 
     if not result:
-        console.print("[yellow]No items found[/yellow]")
+        c.print("[yellow]No items found[/yellow]")
         return
 
     table = Table(
@@ -87,21 +63,19 @@ def format_uri_list(data: dict[str, Any]) -> None:
     for item in result:
         table.add_row(item.get("name", ""), item.get("uri", ""))
 
-    console.print(table)
+    c.print(table)
 
 
-def format_product_list(data: dict[str, Any], full: bool = False) -> None:
-    """Format and print a list of products.
-
-    Args:
-        data: Response containing products
-        full: Whether this is full product data
-    """
+def format_product_list(
+    data: dict[str, Any], full: bool = False, *, console: Console | None = None
+) -> None:
+    """Format and print a list of products."""
+    c = console or _default_console
     result = data.get("result", [])
     total = data.get("total", len(result))
 
     if not result:
-        console.print("[yellow]No products found[/yellow]")
+        c.print("[yellow]No products found[/yellow]")
         return
 
     table = Table(
@@ -120,22 +94,25 @@ def format_product_list(data: dict[str, Any], full: bool = False) -> None:
         table.add_column("Releases", justify="right", style="magenta")
 
     for product in result:
-        tags = ", ".join(product.get("tags", [])[:3])
-        if len(product.get("tags", [])) > 3:
-            tags += "..."
+        tags = product.get("tags", [])
+        tag_names = ", ".join(tags[:_MAX_TAGS_DISPLAYED])
+        if len(tags) > _MAX_TAGS_DISPLAYED:
+            tag_names += "..."
 
-        row = [product.get("name", ""), product.get("label", ""), product.get("category", ""), tags]
+        name = product.get("name", "")
+        label = product.get("label", "")
+        category = product.get("category", "")
 
         if full:
             releases = product.get("releases", [])
-            row.append(str(len(releases)))
+            table.add_row(name, label, category, tag_names, str(len(releases)))
+        else:
+            table.add_row(name, label, category, tag_names)
 
-        table.add_row(*row)
-
-    console.print(table)
+    c.print(table)
 
 
-def _print_product_header(result: dict[str, Any]) -> None:
+def _print_product_header(result: dict[str, Any], c: Console) -> None:
     """Print product header panel."""
     header = Panel(
         f"[bold cyan]{result.get('label', result.get('name', 'Unknown'))}[/bold cyan]\n"
@@ -143,18 +120,18 @@ def _print_product_header(result: dict[str, Any]) -> None:
         box=box.DOUBLE,
         border_style="cyan",
     )
-    console.print(header)
+    c.print(header)
 
 
-def _print_product_info(result: dict[str, Any]) -> None:
+def _print_product_info(result: dict[str, Any], c: Console) -> None:
     """Print product basic information."""
     info_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
     info_table.add_column("Field", style="bold")
     info_table.add_column("Value")
 
     info_table.add_row("Category", result.get("category", "N/A"))
-    tags = ", ".join(result.get("tags", []))
-    info_table.add_row("Tags", tags or "N/A")
+    tag_names = ", ".join(result.get("tags", []))
+    info_table.add_row("Tags", tag_names or "N/A")
     aliases = ", ".join(result.get("aliases", []))
     info_table.add_row("Aliases", aliases or "None")
 
@@ -162,10 +139,10 @@ def _print_product_info(result: dict[str, Any]) -> None:
     if version_cmd:
         info_table.add_row("Version Command", f"[cyan]{version_cmd}[/cyan]")
 
-    console.print(Panel(info_table, title="[bold]Product Information[/bold]", border_style="blue"))
+    c.print(Panel(info_table, title="[bold]Product Information[/bold]", border_style="blue"))
 
 
-def _print_product_links(links: dict[str, Any]) -> None:
+def _print_product_links(links: dict[str, Any], c: Console) -> None:
     """Print product links."""
     if not links:
         return
@@ -181,12 +158,12 @@ def _print_product_links(links: dict[str, Any]) -> None:
     if links.get("icon"):
         links_table.add_row("Icon", links["icon"])
 
-    console.print(Panel(links_table, title="[bold]Links[/bold]", border_style="blue"))
+    c.print(Panel(links_table, title="[bold]Links[/bold]", border_style="blue"))
 
 
-def _print_product_identifiers(identifiers: list[dict[str, Any]]) -> None:
+def _print_product_identifiers(identifiers: list[dict[str, Any]], c: Console) -> None:
     """Print product identifiers."""
-    if not identifiers:
+    if not isinstance(identifiers, list) or not identifiers:
         return
 
     id_table = Table(box=box.SIMPLE, show_header=True, header_style="bold")
@@ -196,37 +173,38 @@ def _print_product_identifiers(identifiers: list[dict[str, Any]]) -> None:
     for identifier in identifiers:
         id_table.add_row(identifier.get("type", ""), identifier.get("id", ""))
 
-    console.print(Panel(id_table, title="[bold]Identifiers[/bold]", border_style="blue"))
+    c.print(Panel(id_table, title="[bold]Identifiers[/bold]", border_style="blue"))
 
 
-def format_product_details(data: dict[str, Any], show_all: bool = False) -> None:
-    """Format and print detailed product information.
-
-    Args:
-        data: Response containing product details
-        show_all: If True, show all details. If False, show only releases table.
-    """
+def format_product_details(
+    data: dict[str, Any],
+    show_all: bool = False,
+    show_header: bool = False,
+    *,
+    console: Console | None = None,
+) -> None:
+    """Format and print detailed product information."""
+    c = console or _default_console
     result = data.get("result", {})
 
     if not result:
-        console.print("[yellow]No data found[/yellow]")
+        c.print("[yellow]No data found[/yellow]")
         return
 
     if show_all:
-        _print_product_header(result)
-        _print_product_info(result)
-        _print_product_links(result.get("links", {}))
-        _print_product_identifiers(result.get("identifiers", []))
-        console.print()  # Add spacing before releases
+        _print_product_header(result, c)
+        _print_product_info(result, c)
+        _print_product_links(result.get("links", {}), c)
+        _print_product_identifiers(result.get("identifiers", []), c)
+        c.print()  # Add spacing before releases
+    elif show_header:
+        _print_product_header(result, c)
 
     # Always show releases
     releases = result.get("releases", [])
     if releases:
         if show_all:
-            console.print(f"[bold]Release Cycles[/bold] ({len(releases)} total)\n")
-        else:
-            # Just show a minimal header when not showing all details
-            pass
+            c.print(f"[bold]Release Cycles[/bold] ({len(releases)} total)\n")
 
         releases_table = Table(box=box.ROUNDED, show_header=True, header_style="bold cyan")
 
@@ -235,7 +213,6 @@ def format_product_details(data: dict[str, Any], show_all: bool = False) -> None
         releases_table.add_column("Released", style="blue")
         releases_table.add_column("LTS", justify="center")
         releases_table.add_column("Status", justify="center")
-        releases_table.add_column("EOL Date", style="yellow")
         releases_table.add_column("Latest", style="magenta")
 
         for release in releases:
@@ -253,11 +230,10 @@ def format_product_details(data: dict[str, Any], show_all: bool = False) -> None
                 _format_date(release.get("releaseDate")),
                 _format_boolean(release.get("isLts", False)),
                 _format_eol_status(release.get("isEol", False), release.get("eolFrom")),
-                _format_date(release.get("eolFrom")),
                 latest_version,
             )
 
-        console.print(releases_table)
+        c.print(releases_table)
 
 
 def _build_release_info_table(result: dict[str, Any]) -> Table:
@@ -318,16 +294,15 @@ def _add_support_status(info_table: Table, result: dict[str, Any]) -> None:
             info_table.add_row("Discontinued Date", _format_date(result["discontinuedFrom"]))
 
 
-def format_release_details(data: dict[str, Any]) -> None:
-    """Format and print release cycle details.
-
-    Args:
-        data: Response containing release details
-    """
+def format_release_details(
+    data: dict[str, Any], *, console: Console | None = None
+) -> None:
+    """Format and print release cycle details."""
+    c = console or _default_console
     result = data.get("result", {})
 
     if not result:
-        console.print("[yellow]No data found[/yellow]")
+        c.print("[yellow]No data found[/yellow]")
         return
 
     # Header
@@ -336,13 +311,13 @@ def format_release_details(data: dict[str, Any]) -> None:
         box=box.DOUBLE,
         border_style="cyan",
     )
-    console.print(header)
+    c.print(header)
 
     # Build and populate info table
     info_table = _build_release_info_table(result)
     _add_support_status(info_table, result)
 
-    console.print(Panel(info_table, title="[bold]Release Information[/bold]", border_style="blue"))
+    c.print(Panel(info_table, title="[bold]Release Information[/bold]", border_style="blue"))
 
     # Latest version
     latest = result.get("latest")
@@ -357,7 +332,7 @@ def format_release_details(data: dict[str, Any]) -> None:
         if latest.get("link"):
             latest_table.add_row("Release Notes", f"[blue]{latest['link']}[/blue]")
 
-        console.print(
+        c.print(
             Panel(latest_table, title="[bold]Latest Version[/bold]", border_style="green")
         )
 
@@ -371,22 +346,49 @@ def format_release_details(data: dict[str, Any]) -> None:
         for key, value in custom.items():
             custom_table.add_row(key, str(value) if value is not None else "N/A")
 
-        console.print(
+        c.print(
             Panel(custom_table, title="[bold]Custom Fields[/bold]", border_style="magenta")
         )
 
 
-def format_identifier_list(data: dict[str, Any]) -> None:
-    """Format and print a list of identifiers.
+def format_product_suggestions(
+    product: str,
+    suggestions: list[tuple[str, float]],
+    *,
+    console: Console | None = None,
+) -> None:
+    """Display pre-computed product suggestions."""
+    if not suggestions:
+        return
 
-    Args:
-        data: Response containing identifiers
-    """
+    c = console or _default_stderr_console
+
+    c.print("\n[yellow]Did you mean one of these?[/yellow]", highlight=False)
+
+    table = Table(show_header=True, header_style="bold cyan", box=None, padding=(0, 2))
+    table.add_column("Product", style="green", no_wrap=True)
+    table.add_column("Similarity", justify="right", style="yellow")
+
+    for suggested_product, score in suggestions:
+        percentage = f"{score * 100:.1f}%"
+        table.add_row(suggested_product, percentage)
+
+    c.print(table)
+    c.print(
+        f"\n[dim]Try: eol-cli products get {suggestions[0][0]}[/dim]", highlight=False
+    )
+
+
+def format_identifier_list(
+    data: dict[str, Any], *, console: Console | None = None
+) -> None:
+    """Format and print a list of identifiers."""
+    c = console or _default_console
     result = data.get("result", [])
     total = data.get("total", len(result))
 
     if not result:
-        console.print("[yellow]No identifiers found[/yellow]")
+        c.print("[yellow]No identifiers found[/yellow]")
         return
 
     table = Table(
@@ -406,4 +408,4 @@ def format_identifier_list(data: dict[str, Any]) -> None:
             item.get("identifier", ""), product.get("name", "N/A"), product.get("uri", "")
         )
 
-    console.print(table)
+    c.print(table)

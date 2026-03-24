@@ -1,8 +1,10 @@
-"""Tests for the API client -"""
+"""Tests for the API client."""
 
 import pytest
 
 from eol_cli.api.client import EOLAPIError, EOLClient, EOLNotFoundError
+
+pytestmark = pytest.mark.api
 
 
 class TestEOLClient:

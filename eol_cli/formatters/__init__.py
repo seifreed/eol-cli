@@ -5,6 +5,7 @@ from eol_cli.formatters.rich_formatter import (
     format_identifier_list,
     format_product_details,
     format_product_list,
+    format_product_suggestions,
     format_release_details,
     format_uri_list,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "format_uri_list",
     "format_product_list",
     "format_product_details",
+    "format_product_suggestions",
     "format_release_details",
     "format_identifier_list",
 ]

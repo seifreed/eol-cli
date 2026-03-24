@@ -1,5 +1,8 @@
 """Tests for API client and CLI edge cases and error scenarios."""
 
+from contextlib import redirect_stdout
+from io import StringIO
+
 import pytest
 from click.testing import CliRunner
 
@@ -10,6 +13,7 @@ from eol_cli.commands.identifiers import identifiers
 from eol_cli.commands.index import index
 from eol_cli.commands.products import products
 from eol_cli.commands.tags import tags
+from eol_cli.formatters.rich_formatter import format_product_details, format_release_details
 
 
 class TestAPIErrorScenarios:
@@ -29,6 +33,7 @@ class TestAPIErrorScenarios:
         assert "Test error message" in str(error)
         assert isinstance(error, Exception)
 
+    @pytest.mark.api
     def test_client_request_method_error_handling(self):
         """Test _request method error handling with invalid endpoint."""
         with EOLClient() as client:
@@ -37,27 +42,28 @@ class TestAPIErrorScenarios:
                 client._request("/invalid/endpoint/that/should/fail/with/404")
 
 
+@pytest.mark.api
 class TestCLIErrorHandling:
     """Test CLI error handling for full coverage."""
 
-    def test_categories_get_not_found_error_message(self):
+    def test_categories_get_not_found_error_message(self, client_obj):
         """Test error message when category not found."""
         runner = CliRunner()
-        result = runner.invoke(categories, ["get", "nonexistent-category"])
+        result = runner.invoke(categories, ["get", "nonexistent-category"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
-    def test_tags_get_not_found_error_message(self):
+    def test_tags_get_not_found_error_message(self, client_obj):
         """Test error message when tag not found."""
         runner = CliRunner()
-        result = runner.invoke(tags, ["get", "nonexistent-tag"])
+        result = runner.invoke(tags, ["get", "nonexistent-tag"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
-    def test_identifiers_get_not_found_error_message(self):
+    def test_identifiers_get_not_found_error_message(self, client_obj):
         """Test error message when identifier type not found."""
         runner = CliRunner()
-        result = runner.invoke(identifiers, ["get", "nonexistent-type"])
+        result = runner.invoke(identifiers, ["get", "nonexistent-type"], obj=client_obj)
         assert result.exit_code == 1
         assert "not found" in result.output.lower()
 
@@ -70,25 +76,21 @@ class TestCLIErrorHandling:
         assert result.exit_code == 0
         assert "list" in result.output.lower()
 
-    def test_products_get_multiple_all_invalid(self):
+    def test_products_get_multiple_all_invalid(self, client_obj):
         """Test products get when all products are invalid."""
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "invalid1,invalid2,invalid3"])
+        result = runner.invoke(products, ["get", "invalid1,invalid2,invalid3"], obj=client_obj)
         assert result.exit_code == 1
         # Should show warnings for all invalid products
         assert "invalid1" in result.output or "Warning" in result.output
 
 
+@pytest.mark.api
 class TestEdgeCasesFormatters:
     """Test edge cases in formatters for full coverage."""
 
     def test_rich_formatter_empty_links(self):
         """Test rich formatter with product having empty links."""
-        from contextlib import redirect_stdout
-        from io import StringIO
-
-        from eol_cli.formatters.rich_formatter import format_product_details
-
         data = {
             "result": {
                 "name": "test-product",
@@ -110,11 +112,6 @@ class TestEdgeCasesFormatters:
 
     def test_rich_formatter_with_none_dates(self):
         """Test rich formatter with None dates."""
-        from contextlib import redirect_stdout
-        from io import StringIO
-
-        from eol_cli.formatters.rich_formatter import format_release_details
-
         data = {
             "result": {
                 "name": "1.0",
@@ -134,11 +131,6 @@ class TestEdgeCasesFormatters:
 
     def test_rich_formatter_with_support_dates(self):
         """Test rich formatter with support and discontinuedFrom dates."""
-        from contextlib import redirect_stdout
-        from io import StringIO
-
-        from eol_cli.formatters.rich_formatter import format_release_details
-
         with EOLClient() as client:
             # Get a real release that might have support dates
             data = client.get_product_release("python", "3.11")
@@ -152,11 +144,6 @@ class TestEdgeCasesFormatters:
 
     def test_rich_formatter_product_with_all_fields(self):
         """Test rich formatter with product having all possible fields."""
-        from contextlib import redirect_stdout
-        from io import StringIO
-
-        from eol_cli.formatters.rich_formatter import format_product_details
-
         with EOLClient() as client:
             data = client.get_product("python")
 
@@ -168,38 +155,40 @@ class TestEdgeCasesFormatters:
             assert len(result) > 0
 
 
+@pytest.mark.api
 class TestCLIOptionsValidation:
     """Test CLI options validation for full coverage."""
 
-    def test_products_list_full_json(self):
+    def test_products_list_full_json(self, client_obj):
         """Test products list --full with JSON output."""
         runner = CliRunner()
-        result = runner.invoke(products, ["list", "--full", "--json"])
+        result = runner.invoke(products, ["list", "--full", "--json"], obj=client_obj)
         assert result.exit_code == 0
         assert "releases" in result.output
 
-    def test_products_get_all_with_json(self):
+    def test_products_get_all_with_json(self, client_obj):
         """Test products get --all with JSON output."""
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python", "--all", "--json"])
+        result = runner.invoke(products, ["get", "python", "--all", "--json"], obj=client_obj)
         assert result.exit_code == 0
         assert "python" in result.output
 
-    def test_products_get_all_with_xml(self):
+    def test_products_get_all_with_xml(self, client_obj):
         """Test products get --all with XML output."""
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python", "--all", "--xml"])
+        result = runner.invoke(products, ["get", "python", "--all", "--xml"], obj=client_obj)
         assert result.exit_code == 0
         assert "<response>" in result.output
 
-    def test_index_command_base_functionality(self):
+    def test_index_command_base_functionality(self, client_obj):
         """Test index command without flags."""
         runner = CliRunner()
-        result = runner.invoke(index, [])
+        result = runner.invoke(index, [], obj=client_obj)
         assert result.exit_code == 0
         assert len(result.output) > 0
 
 
+@pytest.mark.api
 class TestAPIClientEdgeCases:
     """Test API client edge cases."""
 
@@ -224,29 +213,32 @@ class TestAPIClientEdgeCases:
             assert data["result"]["name"] == "alpine-linux"
 
 
+@pytest.mark.api
 class TestComplexScenarios:
     """Test complex usage scenarios."""
 
-    def test_multiple_products_with_spaces(self):
+    def test_multiple_products_with_spaces(self, client_obj):
         """Test products get with spaces around commas."""
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python, nodejs, ruby"])
+        result = runner.invoke(products, ["get", "python, nodejs, ruby"], obj=client_obj)
         # Should handle spaces and work correctly
         assert result.exit_code == 0
 
-    def test_products_get_duplicate_names(self):
+    def test_products_get_duplicate_names(self, client_obj):
         """Test products get with duplicate product names."""
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python,python,nodejs"])
+        result = runner.invoke(products, ["get", "python,python,nodejs"], obj=client_obj)
         # Should handle duplicates gracefully
         assert result.exit_code == 0
 
-    def test_products_get_empty_string(self):
-        """Test products get with empty string after split."""
+    def test_products_get_empty_string(self, client_obj):
+        """Test products get with empty string after split.
+
+        Empty segments are filtered out, so "python,,nodejs" behaves as "python,nodejs".
+        """
         runner = CliRunner()
-        result = runner.invoke(products, ["get", "python,,nodejs"])
-        # Should handle empty strings in list
-        assert result.exit_code == 0 or result.exit_code == 1
+        result = runner.invoke(products, ["get", "python,,nodejs"], obj=client_obj)
+        assert result.exit_code == 0
 
     def test_full_cli_workflow(self):
         """Test complete CLI workflow."""
@@ -287,17 +279,14 @@ class TestFormatterHelpers:
         """Test _format_boolean with various inputs."""
         from eol_cli.formatters.rich_formatter import _format_boolean
 
-        # Test with True
         result_true = _format_boolean(True)
-        assert result_true is not None
+        assert "Yes" in result_true
 
-        # Test with False
         result_false = _format_boolean(False)
-        assert result_false is not None
+        assert "No" in result_false
 
-        # Test with None
-        result_none = _format_boolean(None)
-        assert result_none is not None
+        result_custom = _format_boolean(True, "Active", "Inactive")
+        assert "Active" in result_custom
 
     def test_format_eol_status_various_states(self):
         """Test _format_eol_status with various states."""

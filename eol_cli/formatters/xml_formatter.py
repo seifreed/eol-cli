@@ -5,6 +5,18 @@ from typing import Any
 from xml.dom import minidom
 
 
+_PLURAL_TO_SINGULAR: dict[str, str] = {
+    "releases": "release",
+    "tags": "tag",
+    "aliases": "alias",
+    "identifiers": "identifier",
+    "results": "result",
+    "products": "product",
+    "categories": "category",
+    "items": "item",
+}
+
+
 def _dict_to_xml(parent: ET.Element, data: Any, item_name: str = "item") -> None:
     """Convert a dictionary or list to XML elements recursively.
 
@@ -18,7 +30,8 @@ def _dict_to_xml(parent: ET.Element, data: Any, item_name: str = "item") -> None
             # Handle special characters in key names
             safe_key = str(key).replace(" ", "_").replace("-", "_")
             child = ET.SubElement(parent, safe_key)
-            _dict_to_xml(child, value, item_name)
+            singular = _PLURAL_TO_SINGULAR.get(safe_key, safe_key)
+            _dict_to_xml(child, value, item_name=singular)
     elif isinstance(data, list):
         for item in data:
             child = ET.SubElement(parent, item_name)
@@ -26,6 +39,8 @@ def _dict_to_xml(parent: ET.Element, data: Any, item_name: str = "item") -> None
     elif data is None:
         parent.text = ""
         parent.set("nil", "true")
+    elif isinstance(data, bool):
+        parent.text = "true" if data else "false"
     else:
         parent.text = str(data)
 
@@ -49,4 +64,5 @@ def format_xml(data: dict[str, Any], pretty: bool = True) -> str:
         dom = minidom.parseString(xml_str)
         return dom.toprettyxml(indent="  ", encoding=None)
     else:
-        return ET.tostring(root, encoding="unicode")
+        xml_declaration = '<?xml version="1.0" ?>\n'
+        return xml_declaration + ET.tostring(root, encoding="unicode")

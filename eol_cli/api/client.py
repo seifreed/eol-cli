@@ -5,6 +5,10 @@ from typing import Any
 import requests
 from requests.exceptions import HTTPError, RequestException
 
+from eol_cli._version import __version__
+
+API_SCHEMA_VERSION = "1.2.0"
+
 
 class EOLAPIError(Exception):
     """Base exception for EOL API errors."""
@@ -45,7 +49,7 @@ class EOLClient:
         self.session = requests.Session()
         self.session.headers.update(
             {
-                "User-Agent": "eol-cli/0.1.0 (https://github.com/seifreed/eol-cli)",
+                "User-Agent": f"eol-cli/{__version__} (https://github.com/seifreed/eol-cli)",
                 "Accept": "application/json",
             }
         )
@@ -208,14 +212,19 @@ class EOLClient:
         """
         return self._request(f"/identifiers/{identifier_type}")
 
-    def close(self):
+    def close(self) -> None:
         """Close the HTTP session."""
         self.session.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "EOLClient":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: object,
+    ) -> None:
+        """Context manager exit; does not suppress exceptions."""
         self.close()

@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from contextlib import redirect_stdout
 from io import StringIO
 
+import pytest
+
 from eol_cli.api.client import EOLClient
 from eol_cli.formatters import rich_formatter
 from eol_cli.formatters.json_formatter import format_json
@@ -64,6 +66,7 @@ class TestJSONFormatter:
         assert parsed["key"] is None
         assert "null" in result
 
+    @pytest.mark.api
     def test_format_json_with_real_api_data(self):
         """Test JSON formatting with real API data."""
         with EOLClient() as client:
@@ -152,6 +155,7 @@ class TestXMLFormatter:
         lines = result.split("\n")
         assert len(lines) <= 2  # May have XML declaration
 
+    @pytest.mark.api
     def test_format_xml_with_real_api_data(self):
         """Test XML formatting with real API data."""
         with EOLClient() as client:
@@ -170,6 +174,7 @@ class TestXMLFormatter:
             assert result_elem is not None
 
 
+@pytest.mark.api
 class TestRichFormatter:
     """Test Rich formatter functions."""
 
@@ -297,6 +302,66 @@ class TestRichFormatter:
         assert len(result_active) > 0
 
 
+class TestFormatProductSuggestions:
+    """Test format_product_suggestions with injectable console."""
+
+    def test_shows_suggestions_table(self):
+        from rich.console import Console
+
+        buf = StringIO()
+        test_console = Console(file=buf, highlight=False)
+        rich_formatter.format_product_suggestions(
+            "pythn", [("python", 0.92), ("pytorch", 0.45)], console=test_console
+        )
+        output = buf.getvalue()
+        assert "python" in output
+        assert "92.0%" in output
+        assert "pytorch" in output
+        assert "eol-cli products get python" in output
+
+    def test_empty_suggestions_prints_nothing(self):
+        from rich.console import Console
+
+        buf = StringIO()
+        test_console = Console(file=buf)
+        rich_formatter.format_product_suggestions("xyz", [], console=test_console)
+        assert buf.getvalue() == ""
+
+
+class TestXMLSingularization:
+    """Test XML element naming for list items."""
+
+    def test_releases_uses_release_tag(self):
+        data = {"releases": [{"name": "1.0"}, {"name": "2.0"}]}
+        root = ET.fromstring(format_xml(data))
+        releases = root.find("releases")
+        children = list(releases)
+        assert all(child.tag == "release" for child in children)
+
+    def test_tags_uses_tag_element(self):
+        data = {"tags": ["linux", "server"]}
+        root = ET.fromstring(format_xml(data))
+        tags_elem = root.find("tags")
+        children = list(tags_elem)
+        assert all(child.tag == "tag" for child in children)
+
+    def test_status_key_not_mangled(self):
+        data = {"status": ["active", "inactive"]}
+        root = ET.fromstring(format_xml(data))
+        status = root.find("status")
+        children = list(status)
+        # 'status' is not in the plural map, so children keep 'status' as tag
+        assert all(child.tag == "status" for child in children)
+
+    def test_aliases_uses_alias_tag(self):
+        data = {"aliases": ["ubuntu-lts", "ubuntu"]}
+        root = ET.fromstring(format_xml(data))
+        aliases = root.find("aliases")
+        children = list(aliases)
+        assert all(child.tag == "alias" for child in children)
+
+
+@pytest.mark.api
 class TestFormattersIntegration:
     """Integration tests for all formatters."""
 
