@@ -52,4 +52,4 @@ main.add_command(index)
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pragma: no cover

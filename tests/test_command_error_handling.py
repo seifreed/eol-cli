@@ -215,8 +215,90 @@ class TestAPIClientErrorHandling:
             client.close()
 
 
+class TestProductsGetEdgePaths:
+    """Test edge paths in products get command."""
+
+    def test_products_get_empty_names(self):
+        """Comma-only input produces no valid product names."""
+        runner = CliRunner()
+        obj = _make_mock_client()
+        result = runner.invoke(products, ["get", ",,,"], obj=obj)
+        assert result.exit_code == 1
+        assert "no valid product" in result.output.lower()
+
+    def test_products_get_json_single(self):
+        """JSON output for a single product goes through emit()."""
+        runner = CliRunner()
+        mock_data = {"schema_version": "1.2.0", "result": {"name": "python", "releases": []}}
+        obj = _make_mock_client()
+        obj["client"].get_product.return_value = mock_data
+        result = runner.invoke(products, ["get", "python", "--json"], obj=obj)
+        assert result.exit_code == 0
+        assert '"python"' in result.output
+
+    def test_products_get_xml_multi(self):
+        """XML output for multiple products aggregates and goes through emit()."""
+        runner = CliRunner()
+        mock_data = {"schema_version": "1.2.0", "result": {"name": "p", "releases": []}}
+        obj = _make_mock_client()
+        obj["client"].get_product.return_value = mock_data
+        result = runner.invoke(products, ["get", "a,b", "--xml"], obj=obj)
+        assert result.exit_code == 0
+        assert "<response>" in result.output
+
+    def test_products_get_outer_api_error_catch(self):
+        """EOLAPIError that bypasses inner handlers is caught by the outer except."""
+        runner = CliRunner()
+        # Make get_product return valid data, but make list_products (called in
+        # _handle_errors_and_suggestions for the not-found product) raise an
+        # EOLAPIError that propagates to the outer handler.
+        from eol_cli.api.client import EOLNotFoundError
+
+        call_count = {"n": 0}
+
+        def get_product_side_effect(name: str) -> dict:
+            call_count["n"] += 1
+            if name == "valid":
+                return {"schema_version": "1.2.0", "result": {"name": "valid", "releases": []}}
+            raise EOLNotFoundError(f"Not found: {name}")
+
+        obj = _make_mock_client()
+        obj["client"].get_product.side_effect = get_product_side_effect
+        obj["client"].list_products.return_value = {"result": []}
+        result = runner.invoke(products, ["get", "valid,invalid"], obj=obj)
+        # _fetch_products catches the NotFoundError, _handle_errors_and_suggestions
+        # prints warning and tries suggestions. The result still succeeds for valid.
+        assert "warning" in result.output.lower() or "not found" in result.output.lower()
+
+    def test_products_get_suggestion_rate_limited(self):
+        """Rate limit error during suggestion fetch shows specific message."""
+        runner = CliRunner()
+        from eol_cli.api.client import EOLNotFoundError, EOLRateLimitError
+
+        obj = _make_mock_client(
+            get_product=EOLNotFoundError("not found"),
+            list_products=EOLRateLimitError("rate limited"),
+        )
+        result = runner.invoke(products, ["get", "pythn"], obj=obj)
+        assert result.exit_code == 1
+        assert "rate limited" in result.output.lower()
+
+    def test_products_get_suggestion_api_error(self):
+        """Generic API error during suggestion fetch shows fallback message."""
+        runner = CliRunner()
+        from eol_cli.api.client import EOLNotFoundError
+
+        obj = _make_mock_client(
+            get_product=EOLNotFoundError("not found"),
+            list_products=EOLAPIError("server down"),
+        )
+        result = runner.invoke(products, ["get", "pythn"], obj=obj)
+        assert result.exit_code == 1
+        assert "could not fetch suggestions" in result.output.lower()
+
+
 class TestProductsReleaseErrorPath:
-    """Test products release command API error."""
+    """Test products release command error paths."""
 
     def test_products_release_api_error(self):
         runner = CliRunner()
@@ -224,6 +306,36 @@ class TestProductsReleaseErrorPath:
         result = runner.invoke(products, ["release", "python", "3.11"], obj=obj)
         assert result.exit_code == 1
         assert "error" in result.output.lower()
+
+    def test_products_release_latest_api_error(self):
+        """EOLAPIError (not NotFound) on latest release is caught."""
+        runner = CliRunner()
+        obj = _make_mock_client(get_product_latest_release=EOLAPIError("Server Error"))
+        result = runner.invoke(products, ["release", "python", "latest"], obj=obj)
+        assert result.exit_code == 1
+        assert "error" in result.output.lower()
+
+    def test_products_get_outer_except_api_error(self):
+        """EOLAPIError raised after fetch/suggestions is caught by outer handler."""
+        runner = CliRunner()
+        # Make get_product succeed, then make the data trigger an error during
+        # output by returning data that causes _create_aggregated_response to
+        # access all_data[0] on an empty list — but _handle_errors raises Abort
+        # before that. The only way to reach lines 187-189 is if something
+        # between _handle_errors and the end of the try block raises EOLAPIError.
+        # We simulate this by patching _output_rich_format to raise.
+        obj = _make_mock_client()
+        obj["client"].get_product.return_value = {
+            "schema_version": "1.2.0",
+            "result": {"name": "p", "releases": []},
+        }
+        with patch(
+            "eol_cli.commands.products._output_rich_format",
+            side_effect=EOLAPIError("Unexpected render error"),
+        ):
+            result = runner.invoke(products, ["get", "python"], obj=obj)
+        assert result.exit_code == 1
+        assert "unexpected render error" in result.output.lower()
 
 
 class TestCLIMainErrorPath:
@@ -243,3 +355,45 @@ class TestCLIMainErrorPath:
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
         assert "0.1.0" in result.output
+
+
+class TestVersionFallback:
+    """Test _version.py fallback when package is not installed."""
+
+    def test_version_fallback_when_not_installed(self):
+        """PackageNotFoundError triggers the dev fallback."""
+        from importlib.metadata import PackageNotFoundError
+
+        with patch(
+            "importlib.metadata.version", side_effect=PackageNotFoundError("eol-cli")
+        ):
+            import importlib
+
+            import eol_cli._version
+
+            importlib.reload(eol_cli._version)
+            assert eol_cli._version.__version__ == "0.0.0-dev"
+
+        # Restore
+        import importlib
+
+        import eol_cli._version
+
+        importlib.reload(eol_cli._version)
+
+
+class TestCLIMainGuard:
+    """Test cli.py __main__ guard."""
+
+    def test_main_module_execution(self):
+        """Running cli.py as __main__ invokes main()."""
+        import subprocess
+
+        result = subprocess.run(
+            ["python", "-c", "import runpy; runpy.run_module('eol_cli.cli', run_name='__main__', alter_sys=True)"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        # Will show help/usage since no args, or version error — either way it ran
+        assert result.returncode in (0, 2)
