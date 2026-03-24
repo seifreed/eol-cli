@@ -5,18 +5,11 @@ import xml.etree.ElementTree as ET
 from io import StringIO
 
 import pytest
-from rich.console import Console
 
 from eol_cli.api.client import EOLClient
 from eol_cli.formatters import rich_formatter
 from eol_cli.formatters.json_formatter import format_json
 from eol_cli.formatters.xml_formatter import format_xml
-
-
-def _make_console() -> tuple[StringIO, Console]:
-    """Create a test console that captures output to a StringIO buffer."""
-    buf = StringIO()
-    return buf, Console(file=buf, highlight=False, width=200)
 
 
 class TestJSONFormatter:
@@ -184,66 +177,66 @@ class TestXMLFormatter:
 class TestRichFormatter:
     """Test Rich formatter functions."""
 
-    def test_format_uri_list_with_real_data(self):
+    def test_format_uri_list_with_real_data(self, make_console):
         """Test format_uri_list with real API data."""
         with EOLClient() as client:
             data = client.get_index()
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_uri_list(data, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_format_uri_list_empty_data(self):
+    def test_format_uri_list_empty_data(self, make_console):
         """Test format_uri_list with empty data."""
         data = {"result": [], "total": 0}
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_uri_list(data, console=c)
         assert "No items found" in buf.getvalue()
 
-    def test_format_product_list_with_real_data(self):
+    def test_format_product_list_with_real_data(self, make_console):
         """Test format_product_list with real API data."""
         with EOLClient() as client:
             data = client.list_products()
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_product_list(data, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_format_product_list_full_with_real_data(self):
+    def test_format_product_list_full_with_real_data(self, make_console):
         """Test format_product_list with full data."""
         with EOLClient() as client:
             data = client.list_products_full()
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_product_list(data, full=True, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_format_product_details_with_real_data(self):
+    def test_format_product_details_with_real_data(self, make_console):
         """Test format_product_details with real API data."""
         with EOLClient() as client:
             data = client.get_product("python")
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_product_details(data, show_all=False, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_format_product_details_show_all_with_real_data(self):
+    def test_format_product_details_show_all_with_real_data(self, make_console):
         """Test format_product_details with show_all=True."""
         with EOLClient() as client:
             data = client.get_product("python")
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_product_details(data, show_all=True, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_format_release_details_with_real_data(self):
+    def test_format_release_details_with_real_data(self, make_console):
         """Test format_release_details with real API data."""
         with EOLClient() as client:
             data = client.get_product_release("python", "3.11")
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_release_details(data, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_format_identifier_list_with_real_data(self):
+    def test_format_identifier_list_with_real_data(self, make_console):
         """Test format_identifier_list with real API data."""
         with EOLClient() as client:
             data = client.get_identifiers_by_type("purl")
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_identifier_list(data, console=c)
             assert len(buf.getvalue()) > 0
 
@@ -277,13 +270,10 @@ class TestRichFormatter:
 class TestFormatProductSuggestions:
     """Test format_product_suggestions with injectable console."""
 
-    def test_shows_suggestions_table(self):
-        from rich.console import Console
-
-        buf = StringIO()
-        test_console = Console(file=buf, highlight=False)
+    def test_shows_suggestions_table(self, make_console):
+        buf, c = make_console()
         rich_formatter.format_product_suggestions(
-            "pythn", [("python", 0.92), ("pytorch", 0.45)], console=test_console
+            "pythn", [("python", 0.92), ("pytorch", 0.45)], console=c
         )
         output = buf.getvalue()
         assert "python" in output
@@ -291,12 +281,9 @@ class TestFormatProductSuggestions:
         assert "pytorch" in output
         assert "eol-cli products get python" in output
 
-    def test_empty_suggestions_prints_nothing(self):
-        from rich.console import Console
-
-        buf = StringIO()
-        test_console = Console(file=buf)
-        rich_formatter.format_product_suggestions("xyz", [], console=test_console)
+    def test_empty_suggestions_prints_nothing(self, make_console):
+        buf, c = make_console()
+        rich_formatter.format_product_suggestions("xyz", [], console=c)
         assert buf.getvalue() == ""
 
 
@@ -337,7 +324,7 @@ class TestXMLSingularization:
 class TestFormattersIntegration:
     """Integration tests for all formatters."""
 
-    def test_all_formatters_with_same_data(self):
+    def test_all_formatters_with_same_data(self, make_console):
         """Test that all formatters work with the same data."""
         with EOLClient() as client:
             data = client.get_product("python")
@@ -353,7 +340,7 @@ class TestFormattersIntegration:
             ET.fromstring(xml_result)  # Validate XML
 
             # Rich formatting
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_product_details(data, console=c)
             rich_result = buf.getvalue()
             assert len(rich_result) > 0

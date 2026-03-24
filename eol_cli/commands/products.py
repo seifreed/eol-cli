@@ -4,7 +4,13 @@ from typing import Any
 
 import click
 
-from eol_cli.api.client import API_SCHEMA_VERSION, EOLAPIError, EOLClient, EOLNotFoundError
+from eol_cli.api.client import (
+    API_SCHEMA_VERSION,
+    EOLAPIError,
+    EOLClient,
+    EOLNotFoundError,
+    EOLRateLimitError,
+)
 from eol_cli.commands._output import emit, format_options, validate_format_options
 from eol_cli.formatters import (
     format_product_details,
@@ -121,6 +127,8 @@ def _handle_errors_and_suggestions(
             for product in not_found:
                 suggestions = find_similar_products(product, all_products)
                 format_product_suggestions(product, suggestions)
+        except EOLRateLimitError as e:
+            click.echo(f"(Rate limited, cannot fetch suggestions: {e})", err=True)
         except EOLAPIError as e:
             click.echo(f"(Could not fetch suggestions: {e})", err=True)
 

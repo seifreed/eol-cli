@@ -10,8 +10,8 @@ from eol_cli.formatters import format_json, format_xml
 
 def format_options(fn: Callable[..., Any]) -> Callable[..., Any]:
     """Add --json and --xml output format options to a command."""
-    fn = click.option("--xml", "output_xml", is_flag=True, help="Output in XML format")(fn)
     fn = click.option("--json", "output_json", is_flag=True, help="Output in JSON format")(fn)
+    fn = click.option("--xml", "output_xml", is_flag=True, help="Output in XML format")(fn)
     return fn
 
 

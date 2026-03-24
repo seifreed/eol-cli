@@ -1,10 +1,7 @@
 """Tests for Rich formatter edge cases including empty data, optional fields, and complex scenarios."""
 
-from io import StringIO
-
 import pytest
 from click.testing import CliRunner
-from rich.console import Console
 
 from eol_cli.api.client import EOLClient
 from eol_cli.commands.categories import categories
@@ -14,36 +11,30 @@ from eol_cli.commands.tags import tags
 from eol_cli.formatters import rich_formatter
 
 
-def _make_console() -> tuple[StringIO, Console]:
-    """Create a test console that captures output to a StringIO buffer."""
-    buf = StringIO()
-    return buf, Console(file=buf, highlight=False, width=200)
-
-
 class TestRichFormatterEmptyCases:
     """Test rich formatter with empty/no data cases."""
 
-    def test_format_product_details_empty_result(self):
+    def test_format_product_details_empty_result(self, make_console):
         data = {"result": {}}
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_product_details(data, show_all=False, console=c)
         assert "No data found" in buf.getvalue()
 
-    def test_format_release_details_empty_result(self):
+    def test_format_release_details_empty_result(self, make_console):
         data = {"result": {}}
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
         assert "No data found" in buf.getvalue()
 
-    def test_format_product_list_empty_result(self):
+    def test_format_product_list_empty_result(self, make_console):
         data = {"result": [], "total": 0}
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_product_list(data, full=False, console=c)
         assert "No products found" in buf.getvalue()
 
-    def test_format_identifier_list_empty_result(self):
+    def test_format_identifier_list_empty_result(self, make_console):
         data = {"result": [], "total": 0}
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_identifier_list(data, console=c)
         assert "No identifiers found" in buf.getvalue()
 
@@ -51,7 +42,7 @@ class TestRichFormatterEmptyCases:
 class TestRichFormatterLatestVersionDict:
     """Test rich formatter with latest version as dict."""
 
-    def test_format_product_details_latest_dict(self):
+    def test_format_product_details_latest_dict(self, make_console):
         data = {
             "result": {
                 "name": "test-product",
@@ -71,7 +62,7 @@ class TestRichFormatterLatestVersionDict:
             }
         }
 
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_product_details(data, show_all=False, console=c)
         assert "1.0.5" in buf.getvalue()
 
@@ -79,7 +70,7 @@ class TestRichFormatterLatestVersionDict:
 class TestRichFormatterOptionalFields:
     """Test rich formatter with optional fields present."""
 
-    def test_format_release_details_with_codename(self):
+    def test_format_release_details_with_codename(self, make_console):
         data = {
             "result": {
                 "name": "22.04",
@@ -92,11 +83,11 @@ class TestRichFormatterOptionalFields:
                 "eolFrom": "2027-04-01",
             }
         }
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
         assert "Jammy Jellyfish" in buf.getvalue()
 
-    def test_format_release_details_with_lts_from(self):
+    def test_format_release_details_with_lts_from(self, make_console):
         data = {
             "result": {
                 "name": "test",
@@ -108,11 +99,11 @@ class TestRichFormatterOptionalFields:
                 "eolFrom": "2030-01-01",
             }
         }
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
         assert "2024-06-01" in buf.getvalue()
 
-    def test_format_release_details_with_eoes(self):
+    def test_format_release_details_with_eoes(self, make_console):
         data = {
             "result": {
                 "name": "test",
@@ -125,11 +116,11 @@ class TestRichFormatterOptionalFields:
                 "eoesFrom": "2026-01-01",
             }
         }
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
         assert "2026-01-01" in buf.getvalue()
 
-    def test_format_release_details_with_discontinued(self):
+    def test_format_release_details_with_discontinued(self, make_console):
         data = {
             "result": {
                 "name": "test",
@@ -142,7 +133,7 @@ class TestRichFormatterOptionalFields:
                 "discontinuedFrom": "2023-06-01",
             }
         }
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
         assert "2023-06-01" in buf.getvalue()
 
@@ -260,14 +251,14 @@ class TestCLIMainFunction:
 class TestFormatterComplexScenarios:
     """Test complex formatter scenarios for remaining lines."""
 
-    def test_product_with_real_data_show_all_false(self):
+    def test_product_with_real_data_show_all_false(self, make_console):
         with EOLClient() as client:
             data = client.get_product("ubuntu")
-            buf, c = _make_console()
+            buf, c = make_console()
             rich_formatter.format_product_details(data, show_all=False, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_product_with_empty_links_and_identifiers(self):
+    def test_product_with_empty_links_and_identifiers(self, make_console):
         data = {
             "result": {
                 "name": "test",
@@ -288,7 +279,7 @@ class TestFormatterComplexScenarios:
                 ],
             }
         }
-        buf, c = _make_console()
+        buf, c = make_console()
         rich_formatter.format_product_details(data, show_all=True, console=c)
         assert "Test" in buf.getvalue()
 

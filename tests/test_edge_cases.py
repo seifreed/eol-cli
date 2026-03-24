@@ -88,13 +88,7 @@ class TestCLIErrorHandling:
 class TestEdgeCasesFormatters:
     """Test edge cases in formatters for full coverage."""
 
-    def _make_console(self) -> tuple[StringIO, "Console"]:
-        from rich.console import Console
-
-        buf = StringIO()
-        return buf, Console(file=buf, highlight=False, width=200)
-
-    def test_rich_formatter_empty_links(self):
+    def test_rich_formatter_empty_links(self, make_console):
         """Test rich formatter with product having empty links."""
         data = {
             "result": {
@@ -107,11 +101,11 @@ class TestEdgeCasesFormatters:
                 "releases": [],
             }
         }
-        buf, c = self._make_console()
+        buf, c = make_console()
         format_product_details(data, show_all=True, console=c)
         assert len(buf.getvalue()) > 0
 
-    def test_rich_formatter_with_none_dates(self):
+    def test_rich_formatter_with_none_dates(self, make_console):
         """Test rich formatter with None dates."""
         data = {
             "result": {
@@ -122,23 +116,23 @@ class TestEdgeCasesFormatters:
                 "latest": "1.0.0",
             }
         }
-        buf, c = self._make_console()
+        buf, c = make_console()
         format_release_details(data, console=c)
         assert len(buf.getvalue()) > 0
 
-    def test_rich_formatter_with_support_dates(self):
+    def test_rich_formatter_with_support_dates(self, make_console):
         """Test rich formatter with support and discontinuedFrom dates."""
         with EOLClient() as client:
             data = client.get_product_release("python", "3.11")
-            buf, c = self._make_console()
+            buf, c = make_console()
             format_release_details(data, console=c)
             assert len(buf.getvalue()) > 0
 
-    def test_rich_formatter_product_with_all_fields(self):
+    def test_rich_formatter_product_with_all_fields(self, make_console):
         """Test rich formatter with product having all possible fields."""
         with EOLClient() as client:
             data = client.get_product("python")
-            buf, c = self._make_console()
+            buf, c = make_console()
             format_product_details(data, show_all=True, console=c)
             assert len(buf.getvalue()) > 0
 

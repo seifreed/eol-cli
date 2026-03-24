@@ -1,6 +1,9 @@
 """Shared fixtures for eol-cli tests."""
 
+from io import StringIO
+
 import pytest
+from rich.console import Console
 
 from eol_cli.api.client import EOLClient
 
@@ -17,3 +20,14 @@ def client_obj(request: pytest.FixtureRequest) -> dict:
     client = EOLClient()
     yield {"client": client}
     client.close()
+
+
+@pytest.fixture
+def make_console():
+    """Factory fixture: returns a (StringIO, Console) pair for capturing Rich output."""
+
+    def _factory() -> tuple[StringIO, Console]:
+        buf = StringIO()
+        return buf, Console(file=buf, highlight=False, width=200)
+
+    return _factory
