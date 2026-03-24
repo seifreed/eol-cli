@@ -176,9 +176,10 @@ class TestCLICommandsEdgeCases:
     """Test CLI commands for missing coverage."""
 
     def test_products_get_with_whitespace(self, client_obj):
+        """Whitespace around commas is stripped — behaves as 'python,nodejs'."""
         runner = CliRunner()
         result = runner.invoke(products, ["get", " python , nodejs "], obj=client_obj)
-        assert result.exit_code in (0, 1)
+        assert result.exit_code == 0
 
     def test_categories_get_with_valid_category(self, client_obj):
         runner = CliRunner()

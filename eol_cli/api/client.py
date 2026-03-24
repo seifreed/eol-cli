@@ -3,7 +3,7 @@
 from typing import Any
 
 import requests
-from requests.exceptions import HTTPError, RequestException
+from requests.exceptions import HTTPError, JSONDecodeError, RequestException
 
 from eol_cli._version import __version__
 
@@ -89,7 +89,7 @@ class EOLClient:
             raise EOLAPIError(f"HTTP error occurred: {e}") from e
         except RequestException as e:
             raise EOLAPIError(f"Request failed: {e}") from e
-        except ValueError as e:
+        except (JSONDecodeError, ValueError) as e:
             raise EOLAPIError(f"Invalid JSON response: {e}") from e
 
     # Index endpoint

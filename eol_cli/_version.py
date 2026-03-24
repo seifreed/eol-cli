@@ -1,9 +1,8 @@
-"""Single source of truth for the eol-cli version."""
+"""Version is read from installed package metadata (pyproject.toml is the single source of truth)."""
 
 from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("eol-cli")
 except PackageNotFoundError:
-    # Fallback for running without pip install -e .
-    __version__ = "0.1.0"
+    __version__ = "0.0.0-dev"
