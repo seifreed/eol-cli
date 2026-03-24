@@ -30,41 +30,24 @@ class TestEmit:
 
     def test_emit_json(self, capsys):
         data = {"key": "value"}
-        emit(data, output_json=True, output_xml=False)
+        rich_fn = MagicMock()
+        emit(data, output_json=True, output_xml=False, rich_fn=rich_fn)
         captured = capsys.readouterr()
         assert '"key"' in captured.out
         assert '"value"' in captured.out
+        rich_fn.assert_not_called()
 
     def test_emit_xml(self, capsys):
         data = {"key": "value"}
-        emit(data, output_json=False, output_xml=True)
+        rich_fn = MagicMock()
+        emit(data, output_json=False, output_xml=True, rich_fn=rich_fn)
         captured = capsys.readouterr()
         assert "<key>" in captured.out
         assert "value" in captured.out
+        rich_fn.assert_not_called()
 
     def test_emit_rich_calls_rich_fn(self):
         rich_fn = MagicMock()
         data = {"key": "value"}
         emit(data, output_json=False, output_xml=False, rich_fn=rich_fn, extra="kwarg")
         rich_fn.assert_called_once_with(data, extra="kwarg")
-
-    def test_emit_rich_fn_not_called_for_json(self):
-        rich_fn = MagicMock()
-        emit({"k": "v"}, output_json=True, output_xml=False, rich_fn=rich_fn)
-        rich_fn.assert_not_called()
-
-    def test_emit_rich_fn_not_called_for_xml(self):
-        rich_fn = MagicMock()
-        emit({"k": "v"}, output_json=False, output_xml=True, rich_fn=rich_fn)
-        rich_fn.assert_not_called()
-
-    def test_emit_without_rich_fn_for_json(self, capsys):
-        """emit() works without rich_fn when using JSON output."""
-        emit({"k": "v"}, output_json=True, output_xml=False)
-        captured = capsys.readouterr()
-        assert '"k"' in captured.out
-
-    def test_emit_without_rich_fn_raises_for_rich(self):
-        """emit() raises ValueError when rich_fn is None and no format flag is set."""
-        with pytest.raises(ValueError, match="rich_fn is required"):
-            emit({"k": "v"}, output_json=False, output_xml=False)

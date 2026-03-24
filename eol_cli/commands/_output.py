@@ -25,7 +25,7 @@ def emit(
     data: Any,
     output_json: bool,
     output_xml: bool,
-    rich_fn: Callable[..., None] | None = None,
+    rich_fn: Callable[..., None],
     **rich_kwargs: Any,
 ) -> None:
     """Dispatch output to the appropriate formatter.
@@ -36,14 +36,12 @@ def emit(
         data: The data to format
         output_json: Whether to output as JSON
         output_xml: Whether to output as XML
-        rich_fn: The Rich formatter function for terminal output (required unless JSON/XML)
+        rich_fn: The Rich formatter function for terminal output
         **rich_kwargs: Additional keyword arguments for the Rich formatter
     """
     if output_json:
         click.echo(format_json(data))
     elif output_xml:
         click.echo(format_xml(data))
-    elif rich_fn is not None:
-        rich_fn(data, **rich_kwargs)
     else:
-        raise ValueError("rich_fn is required when not using --json or --xml output")
+        rich_fn(data, **rich_kwargs)

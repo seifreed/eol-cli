@@ -130,21 +130,21 @@ def _handle_errors_and_suggestions(
 
 
 @products.command(name="get")
-@click.argument("products")
+@click.argument("product_names")
 @click.option(
     "--all", "show_all", is_flag=True, help="Show all product details (info, links, identifiers)"
 )
 @format_options
 @click.pass_context
 def get_product(
-    ctx: click.Context, products: str, output_json: bool, output_xml: bool, show_all: bool
+    ctx: click.Context, product_names: str, output_json: bool, output_xml: bool, show_all: bool
 ) -> None:
     """Get detailed information about one or more products.
 
     By default, only shows the releases table. Use --all to see complete details.
     You can query multiple products by separating them with commas.
 
-    PRODUCTS: One or more product names separated by commas (e.g., 'python', 'ubuntu,nodejs')
+    PRODUCT_NAMES: One or more product names separated by commas (e.g., 'python', 'ubuntu,nodejs')
 
     Examples:
         eol-cli products get python
@@ -155,8 +155,7 @@ def get_product(
     """
     validate_format_options(output_json, output_xml)
 
-    product_input = products
-    product_list = [p.strip() for p in product_input.split(",") if p.strip()]
+    product_list = [p.strip() for p in product_names.split(",") if p.strip()]
 
     if not product_list:
         click.echo("Error: No valid product names provided", err=True)
@@ -171,7 +170,7 @@ def get_product(
         # For Rich: iterate with separators (cannot be expressed as a single emit call).
         if output_json or output_xml:
             data = all_data[0] if len(all_data) == 1 else _create_aggregated_response(all_data)
-            emit(data, output_json, output_xml)
+            emit(data, output_json, output_xml, format_product_details)
         else:
             _output_rich_format(all_data, show_all)
 

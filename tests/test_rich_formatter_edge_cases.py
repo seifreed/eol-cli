@@ -1,10 +1,10 @@
 """Tests for Rich formatter edge cases including empty data, optional fields, and complex scenarios."""
 
-from contextlib import redirect_stdout
 from io import StringIO
 
 import pytest
 from click.testing import CliRunner
+from rich.console import Console
 
 from eol_cli.api.client import EOLClient
 from eol_cli.commands.categories import categories
@@ -14,59 +14,44 @@ from eol_cli.commands.tags import tags
 from eol_cli.formatters import rich_formatter
 
 
+def _make_console() -> tuple[StringIO, Console]:
+    """Create a test console that captures output to a StringIO buffer."""
+    buf = StringIO()
+    return buf, Console(file=buf, highlight=False, width=200)
+
+
 class TestRichFormatterEmptyCases:
     """Test rich formatter with empty/no data cases."""
 
     def test_format_product_details_empty_result(self):
-        """Test format_product_details with empty result."""
         data = {"result": {}}
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_product_details(data, show_all=False)
-
-        result = output.getvalue()
-        assert len(result) > 0
+        buf, c = _make_console()
+        rich_formatter.format_product_details(data, show_all=False, console=c)
+        assert "No data found" in buf.getvalue()
 
     def test_format_release_details_empty_result(self):
-        """Test format_release_details with empty result."""
         data = {"result": {}}
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_release_details(data)
-
-        result = output.getvalue()
-        assert len(result) > 0
+        buf, c = _make_console()
+        rich_formatter.format_release_details(data, console=c)
+        assert "No data found" in buf.getvalue()
 
     def test_format_product_list_empty_result(self):
-        """Test format_product_list with empty result."""
         data = {"result": [], "total": 0}
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_product_list(data, full=False)
-
-        result = output.getvalue()
-        assert len(result) > 0
+        buf, c = _make_console()
+        rich_formatter.format_product_list(data, full=False, console=c)
+        assert "No products found" in buf.getvalue()
 
     def test_format_identifier_list_empty_result(self):
-        """Test format_identifier_list with empty result."""
         data = {"result": [], "total": 0}
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_identifier_list(data)
-
-        result = output.getvalue()
-        assert len(result) > 0
+        buf, c = _make_console()
+        rich_formatter.format_identifier_list(data, console=c)
+        assert "No identifiers found" in buf.getvalue()
 
 
 class TestRichFormatterLatestVersionDict:
     """Test rich formatter with latest version as dict."""
 
     def test_format_product_details_latest_dict(self):
-        """Test when latest is a dict type."""
         data = {
             "result": {
                 "name": "test-product",
@@ -86,12 +71,9 @@ class TestRichFormatterLatestVersionDict:
             }
         }
 
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_product_details(data, show_all=False)
-
-        result = output.getvalue()
-        assert "1.0.5" in result
+        buf, c = _make_console()
+        rich_formatter.format_product_details(data, show_all=False, console=c)
+        assert "1.0.5" in buf.getvalue()
 
 
 class TestRichFormatterOptionalFields:
@@ -110,13 +92,9 @@ class TestRichFormatterOptionalFields:
                 "eolFrom": "2027-04-01",
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_release_details(data)
-
-        result = output.getvalue()
-        assert "Jammy Jellyfish" in result
+        buf, c = _make_console()
+        rich_formatter.format_release_details(data, console=c)
+        assert "Jammy Jellyfish" in buf.getvalue()
 
     def test_format_release_details_with_lts_from(self):
         data = {
@@ -130,13 +108,9 @@ class TestRichFormatterOptionalFields:
                 "eolFrom": "2030-01-01",
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_release_details(data)
-
-        result = output.getvalue()
-        assert "2024-06-01" in result
+        buf, c = _make_console()
+        rich_formatter.format_release_details(data, console=c)
+        assert "2024-06-01" in buf.getvalue()
 
     def test_format_release_details_with_eoes(self):
         data = {
@@ -151,13 +125,9 @@ class TestRichFormatterOptionalFields:
                 "eoesFrom": "2026-01-01",
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_release_details(data)
-
-        result = output.getvalue()
-        assert "2026-01-01" in result
+        buf, c = _make_console()
+        rich_formatter.format_release_details(data, console=c)
+        assert "2026-01-01" in buf.getvalue()
 
     def test_format_release_details_with_discontinued(self):
         data = {
@@ -172,13 +142,9 @@ class TestRichFormatterOptionalFields:
                 "discontinuedFrom": "2023-06-01",
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_release_details(data)
-
-        result = output.getvalue()
-        assert "2023-06-01" in result
+        buf, c = _make_console()
+        rich_formatter.format_release_details(data, console=c)
+        assert "2023-06-01" in buf.getvalue()
 
 
 class TestRichFormatterDateEdgeCases:
@@ -297,13 +263,9 @@ class TestFormatterComplexScenarios:
     def test_product_with_real_data_show_all_false(self):
         with EOLClient() as client:
             data = client.get_product("ubuntu")
-
-            output = StringIO()
-            with redirect_stdout(output):
-                rich_formatter.format_product_details(data, show_all=False)
-
-            result = output.getvalue()
-            assert len(result) > 0
+            buf, c = _make_console()
+            rich_formatter.format_product_details(data, show_all=False, console=c)
+            assert len(buf.getvalue()) > 0
 
     def test_product_with_empty_links_and_identifiers(self):
         data = {
@@ -326,13 +288,9 @@ class TestFormatterComplexScenarios:
                 ],
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            rich_formatter.format_product_details(data, show_all=True)
-
-        result = output.getvalue()
-        assert "Test" in result
+        buf, c = _make_console()
+        rich_formatter.format_product_details(data, show_all=True, console=c)
+        assert "Test" in buf.getvalue()
 
 
 @pytest.mark.api

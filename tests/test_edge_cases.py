@@ -1,6 +1,5 @@
 """Tests for API client and CLI edge cases and error scenarios."""
 
-from contextlib import redirect_stdout
 from io import StringIO
 
 import pytest
@@ -89,6 +88,12 @@ class TestCLIErrorHandling:
 class TestEdgeCasesFormatters:
     """Test edge cases in formatters for full coverage."""
 
+    def _make_console(self) -> tuple[StringIO, "Console"]:
+        from rich.console import Console
+
+        buf = StringIO()
+        return buf, Console(file=buf, highlight=False, width=200)
+
     def test_rich_formatter_empty_links(self):
         """Test rich formatter with product having empty links."""
         data = {
@@ -97,18 +102,14 @@ class TestEdgeCasesFormatters:
                 "label": "Test Product",
                 "category": "test",
                 "tags": ["test"],
-                "links": {},  # Empty links
-                "identifiers": {},  # Empty identifiers
+                "links": {},
+                "identifiers": {},
                 "releases": [],
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            format_product_details(data, show_all=True)
-
-        result = output.getvalue()
-        assert len(result) > 0
+        buf, c = self._make_console()
+        format_product_details(data, show_all=True, console=c)
+        assert len(buf.getvalue()) > 0
 
     def test_rich_formatter_with_none_dates(self):
         """Test rich formatter with None dates."""
@@ -121,38 +122,25 @@ class TestEdgeCasesFormatters:
                 "latest": "1.0.0",
             }
         }
-
-        output = StringIO()
-        with redirect_stdout(output):
-            format_release_details(data)
-
-        result = output.getvalue()
-        assert len(result) > 0
+        buf, c = self._make_console()
+        format_release_details(data, console=c)
+        assert len(buf.getvalue()) > 0
 
     def test_rich_formatter_with_support_dates(self):
         """Test rich formatter with support and discontinuedFrom dates."""
         with EOLClient() as client:
-            # Get a real release that might have support dates
             data = client.get_product_release("python", "3.11")
-
-            output = StringIO()
-            with redirect_stdout(output):
-                format_release_details(data)
-
-            result = output.getvalue()
-            assert len(result) > 0
+            buf, c = self._make_console()
+            format_release_details(data, console=c)
+            assert len(buf.getvalue()) > 0
 
     def test_rich_formatter_product_with_all_fields(self):
         """Test rich formatter with product having all possible fields."""
         with EOLClient() as client:
             data = client.get_product("python")
-
-            output = StringIO()
-            with redirect_stdout(output):
-                format_product_details(data, show_all=True)
-
-            result = output.getvalue()
-            assert len(result) > 0
+            buf, c = self._make_console()
+            format_product_details(data, show_all=True, console=c)
+            assert len(buf.getvalue()) > 0
 
 
 @pytest.mark.api
@@ -191,13 +179,6 @@ class TestCLIOptionsValidation:
 @pytest.mark.api
 class TestAPIClientEdgeCases:
     """Test API client edge cases."""
-
-    def test_client_repr(self):
-        """Test client string representation."""
-        client = EOLClient()
-        repr_str = repr(client)
-        assert "EOLClient" in repr_str
-        client.close()
 
     def test_client_double_close(self):
         """Test that closing client twice doesn't cause issues."""

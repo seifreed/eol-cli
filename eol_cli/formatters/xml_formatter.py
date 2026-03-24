@@ -59,10 +59,11 @@ def format_xml(data: dict[str, Any], pretty: bool = True) -> str:
     _dict_to_xml(root, data)
 
     if pretty:
-        # Pretty print the XML
         xml_str = ET.tostring(root, encoding="unicode")
         dom = minidom.parseString(xml_str)
-        return dom.toprettyxml(indent="  ", encoding=None)
+        raw = dom.toprettyxml(indent="  ", encoding=None)
+        # minidom inserts a blank line after the XML declaration; strip it
+        return "\n".join(line for line in raw.splitlines() if line.strip())
     else:
         xml_declaration = '<?xml version="1.0" ?>\n'
         return xml_declaration + ET.tostring(root, encoding="unicode")
