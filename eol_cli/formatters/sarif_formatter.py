@@ -52,20 +52,19 @@ def _release_to_result(
 ) -> dict[str, Any]:
     """Convert a single release object into a SARIF result."""
     is_eol = release.get("isEol", False)
-    release_name = release.get("label") or release.get("name", "unknown")
+    release_cycle = release.get("name", "unknown")
     eol_date = release.get("eolFrom", "N/A")
+    prefix = f"{product_name} {release_cycle}" if product_name else release_cycle
 
     if is_eol:
         level = "error"
         rule_id = _RULE_EOL
-        status = "End of Life"
-        msg = f"{product_name} {release_name}: {status} (since {eol_date})"
+        msg = f"{prefix}: End of Life (since {eol_date})"
     else:
         level = "note"
         rule_id = _RULE_ACTIVE
-        status = "Active"
         eol_info = f", EOL scheduled: {eol_date}" if eol_date != "N/A" else ""
-        msg = f"{product_name} {release_name}: {status}{eol_info}"
+        msg = f"{prefix}: Active{eol_info}"
 
     result: dict[str, Any] = {
         "ruleId": rule_id,
@@ -100,15 +99,15 @@ def _extract_results(data: dict[str, Any]) -> list[dict[str, Any]]:
     # Single product with releases
     result_obj = data.get("result", {})
     if isinstance(result_obj, dict) and "releases" in result_obj:
-        product_name = result_obj.get("label") or result_obj.get("name", "unknown")
+        product_name = result_obj.get("name", "unknown")
         for release in result_obj["releases"]:
             results.append(_release_to_result(product_name, release))
         return results
 
-    # Single release (from products release command)
+    # Single release (from products release command) — no product name in response,
+    # so pass empty string to avoid duplicating the release name in the message.
     if isinstance(result_obj, dict) and "isEol" in result_obj:
-        product_name = result_obj.get("label") or result_obj.get("name", "unknown")
-        results.append(_release_to_result(product_name, result_obj))
+        results.append(_release_to_result("", result_obj))
         return results
 
     # List responses (categories, tags, identifiers, index) — no EOL data

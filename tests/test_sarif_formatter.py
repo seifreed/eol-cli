@@ -68,7 +68,7 @@ class TestSARIFProductResults:
         assert results[0]["level"] == "error"
         assert results[0]["ruleId"] == "EOL001"
         assert "End of Life" in results[0]["message"]["text"]
-        assert "Python" in results[0]["message"]["text"]
+        assert "python 3.8" in results[0]["message"]["text"]
 
     def test_active_release_produces_note(self):
         data = {
@@ -182,7 +182,10 @@ class TestSARIFSingleRelease:
         results = output["runs"][0]["results"]
         assert len(results) == 1
         assert results[0]["level"] == "note"
-        assert "3.11" in results[0]["message"]["text"]
+        msg = results[0]["message"]["text"]
+        assert "3.11: Active" in msg
+        # Should NOT duplicate: "3.11 3.11: Active"
+        assert "3.11 3.11" not in msg
 
 
 class TestSARIFListResponses:

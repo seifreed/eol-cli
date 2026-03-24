@@ -126,7 +126,7 @@ def _handle_errors_and_suggestions(
     if not_found:
         try:
             products_data = client.list_products()
-            all_products = [p.get("name", "") for p in products_data.get("result", [])]
+            all_products = [p["name"] for p in products_data.get("result", []) if p.get("name")]
             for product in not_found:
                 suggestions = find_similar_products(product, all_products)
                 format_product_suggestions(product, suggestions)

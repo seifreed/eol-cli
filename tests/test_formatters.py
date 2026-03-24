@@ -154,6 +154,16 @@ class TestXMLFormatter:
         lines = result.split("\n")
         assert len(lines) <= 2  # May have XML declaration
 
+    def test_format_xml_illegal_key_characters(self):
+        """Keys with characters illegal in XML element names are sanitized."""
+        data = {"@context": "https://example.com", "2nd_edition": True, "#id": 42}
+        result = format_xml(data)
+        root = ET.fromstring(result)
+        # @ becomes _, leading digit gets _ prefix, # becomes _
+        assert root.find("_context") is not None
+        assert root.find("_2nd_edition") is not None
+        assert root.find("_id") is not None
+
     @pytest.mark.api
     def test_format_xml_with_real_api_data(self):
         """Test XML formatting with real API data."""

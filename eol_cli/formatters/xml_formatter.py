@@ -1,5 +1,6 @@
 """XML output formatter."""
 
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 from xml.dom import minidom
@@ -16,6 +17,19 @@ _PLURAL_TO_SINGULAR: dict[str, str] = {
     "items": "item",
 }
 
+# XML element names must start with a letter or underscore, and contain only
+# letters, digits, hyphens, underscores, and periods.
+_INVALID_START = re.compile(r"^[^a-zA-Z_]")
+_INVALID_CHARS = re.compile(r"[^a-zA-Z0-9._-]")
+
+
+def _sanitize_key(key: str) -> str:
+    """Sanitize a dict key into a valid XML element name."""
+    safe = _INVALID_CHARS.sub("_", str(key))
+    if _INVALID_START.match(safe):
+        safe = f"_{safe}"
+    return safe
+
 
 def _dict_to_xml(parent: ET.Element, data: Any, item_name: str = "item") -> None:
     """Convert a dictionary or list to XML elements recursively.
@@ -27,8 +41,7 @@ def _dict_to_xml(parent: ET.Element, data: Any, item_name: str = "item") -> None
     """
     if isinstance(data, dict):
         for key, value in data.items():
-            # Handle special characters in key names
-            safe_key = str(key).replace(" ", "_").replace("-", "_")
+            safe_key = _sanitize_key(key)
             child = ET.SubElement(parent, safe_key)
             singular = _PLURAL_TO_SINGULAR.get(safe_key, safe_key)
             _dict_to_xml(child, value, item_name=singular)
