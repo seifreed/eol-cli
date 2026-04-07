@@ -276,3 +276,161 @@ class TestFormatterHelpers:
         # Not EOL with past date
         result5 = _format_eol_status(False, "2020-01-01")
         assert result5 is not None
+
+
+class TestNullValueHandling:
+    """Test handling of null values from API responses."""
+
+    def test_rich_formatter_product_with_null_tags(self, make_console):
+        """Test rich formatter with null tags value."""
+        data = {
+            "result": {
+                "name": "test-product",
+                "label": "Test Product",
+                "category": "test",
+                "tags": None,  # null from API
+                "aliases": ["alias1"],
+                "releases": [],
+            }
+        }
+        buf, c = make_console()
+        # Should not raise TypeError
+        format_product_details(data, show_all=True, console=c)
+        output = buf.getvalue()
+        assert "N/A" in output
+
+    def test_rich_formatter_product_with_null_aliases(self, make_console):
+        """Test rich formatter with null aliases value."""
+        data = {
+            "result": {
+                "name": "test-product",
+                "label": "Test Product",
+                "category": "test",
+                "tags": ["test"],
+                "aliases": None,  # null from API
+                "releases": [],
+            }
+        }
+        buf, c = make_console()
+        # Should not raise TypeError
+        format_product_details(data, show_all=True, console=c)
+        output = buf.getvalue()
+        assert "None" in output
+
+    def test_rich_formatter_product_list_with_null_tags(self, make_console):
+        """Test product list formatter with null tags."""
+        from eol_cli.formatters.rich_formatter import format_product_list
+
+        data = {
+            "result": [
+                {
+                    "name": "test-product",
+                    "label": "Test Product",
+                    "category": "test",
+                    "tags": None,  # null from API
+                    "releases": [],
+                }
+            ],
+            "total": 1,
+        }
+        buf, c = make_console()
+        # Should not raise TypeError
+        format_product_list(data, console=c)
+        assert len(buf.getvalue()) > 0
+
+    def test_rich_formatter_identifier_with_null_product(self, make_console):
+        """Test identifier formatter with null product."""
+        from eol_cli.formatters.rich_formatter import format_identifier_list
+
+        data = {
+            "result": [
+                {
+                    "identifier": "pkg:pypi/test",
+                    "product": None,  # null from API
+                }
+            ],
+            "total": 1,
+        }
+        buf, c = make_console()
+        # Should not raise AttributeError
+        format_identifier_list(data, console=c)
+        output = buf.getvalue()
+        assert "N/A" in output
+
+    def test_rich_formatter_identifier_with_null_product_name(self, make_console):
+        """Test identifier formatter with product having null name."""
+        from eol_cli.formatters.rich_formatter import format_identifier_list
+
+        data = {
+            "result": [
+                {
+                    "identifier": "pkg:pypi/test",
+                    "product": {"name": None, "uri": "https://example.com"},  # null name
+                }
+            ],
+            "total": 1,
+        }
+        buf, c = make_console()
+        # Should not raise TypeError in join
+        format_identifier_list(data, console=c)
+        output = buf.getvalue()
+        assert "N/A" in output
+
+    def test_sarif_formatter_with_null_eolFrom(self):
+        """Test SARIF formatter with null eolFrom value."""
+        from eol_cli.formatters.sarif_formatter import format_sarif
+
+        data = {
+            "result": {
+                "name": "3.12",
+                "isEol": False,
+                "eolFrom": None,  # null from API
+                "latest": {"name": "3.12.0"},
+            }
+        }
+        # Should not show "EOL scheduled: None"
+        sarif = format_sarif(data)
+        assert "None" not in sarif or '"N/A"' in sarif
+        # Message should not contain "EOL scheduled: None"
+        assert "EOL scheduled: None" not in sarif
+
+    def test_sarif_formatter_eol_with_null_eolFrom(self):
+        """Test SARIF formatter for EOL release with null eolFrom."""
+        from eol_cli.formatters.sarif_formatter import format_sarif
+
+        data = {
+            "result": {
+                "name": "3.6",
+                "isEol": True,
+                "eolFrom": None,  # null from API - EOL but no date
+            }
+        }
+        sarif = format_sarif(data)
+        # Should handle gracefully
+        assert '"N/A"' in sarif or "End of Life" in sarif
+
+    def test_sarif_formatter_with_null_properties(self):
+        """Test SARIF formatter with null values in properties."""
+        from eol_cli.formatters.sarif_formatter import format_sarif
+
+        data = {
+            "result": {
+                "name": "3.12",
+                "isEol": False,
+                "releaseDate": None,
+                "eolFrom": None,
+                "isMaintained": None,
+                "isLts": None,
+            }
+        }
+        # Should not raise any errors and should produce valid JSON
+        sarif = format_sarif(data)
+        import json
+        parsed = json.loads(sarif)
+        assert parsed is not None
+        # Properties should have empty strings instead of null
+        props = parsed["runs"][0]["results"][0]["properties"]
+        assert props["releaseDate"] == ""
+        assert props["eolFrom"] == ""
+        assert props["isMaintained"] is False
+        assert props["isLts"] is False

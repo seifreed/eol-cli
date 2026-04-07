@@ -94,7 +94,7 @@ def format_product_list(
         table.add_column("Releases", justify="right", style="magenta")
 
     for product in result:
-        tags = product.get("tags", [])
+        tags = product.get("tags") or []
         tag_names = ", ".join(tags[:_MAX_TAGS_DISPLAYED])
         if len(tags) > _MAX_TAGS_DISPLAYED:
             tag_names += "..."
@@ -130,9 +130,9 @@ def _print_product_info(result: dict[str, Any], c: Console) -> None:
     info_table.add_column("Value")
 
     info_table.add_row("Category", result.get("category", "N/A"))
-    tag_names = ", ".join(result.get("tags", []))
+    tag_names = ", ".join(result.get("tags") or [])
     info_table.add_row("Tags", tag_names or "N/A")
-    aliases = ", ".join(result.get("aliases", []))
+    aliases = ", ".join(result.get("aliases") or [])
     info_table.add_row("Aliases", aliases or "None")
 
     version_cmd = result.get("versionCommand")
@@ -294,9 +294,7 @@ def _add_support_status(info_table: Table, result: dict[str, Any]) -> None:
             info_table.add_row("Discontinued Date", _format_date(result["discontinuedFrom"]))
 
 
-def format_release_details(
-    data: dict[str, Any], *, console: Console | None = None
-) -> None:
+def format_release_details(data: dict[str, Any], *, console: Console | None = None) -> None:
     """Format and print release cycle details."""
     c = console or _default_console
     result = data.get("result", {})
@@ -332,9 +330,7 @@ def format_release_details(
         if latest.get("link"):
             latest_table.add_row("Release Notes", f"[blue]{latest['link']}[/blue]")
 
-        c.print(
-            Panel(latest_table, title="[bold]Latest Version[/bold]", border_style="green")
-        )
+        c.print(Panel(latest_table, title="[bold]Latest Version[/bold]", border_style="green"))
 
     # Custom fields
     custom = result.get("custom")
@@ -346,9 +342,7 @@ def format_release_details(
         for key, value in custom.items():
             custom_table.add_row(key, str(value) if value is not None else "N/A")
 
-        c.print(
-            Panel(custom_table, title="[bold]Custom Fields[/bold]", border_style="magenta")
-        )
+        c.print(Panel(custom_table, title="[bold]Custom Fields[/bold]", border_style="magenta"))
 
 
 def format_product_suggestions(
@@ -374,14 +368,10 @@ def format_product_suggestions(
         table.add_row(suggested_product, percentage)
 
     c.print(table)
-    c.print(
-        f"\n[dim]Try: eol-cli products get {suggestions[0][0]}[/dim]", highlight=False
-    )
+    c.print(f"\n[dim]Try: eol-cli products get {suggestions[0][0]}[/dim]", highlight=False)
 
 
-def format_identifier_list(
-    data: dict[str, Any], *, console: Console | None = None
-) -> None:
+def format_identifier_list(data: dict[str, Any], *, console: Console | None = None) -> None:
     """Format and print a list of identifiers."""
     c = console or _default_console
     result = data.get("result", [])
@@ -403,9 +393,9 @@ def format_identifier_list(
     table.add_column("Product URI", style="dim")
 
     for item in result:
-        product = item.get("product", {})
+        product = item.get("product") or {}
         table.add_row(
-            item.get("identifier", ""), product.get("name", "N/A"), product.get("uri", "")
+            item.get("identifier", ""), product.get("name") or "N/A", product.get("uri") or ""
         )
 
     c.print(table)

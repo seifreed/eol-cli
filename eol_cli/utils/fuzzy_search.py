@@ -83,8 +83,8 @@ def _combined_similarity(query: str, candidate: str) -> float:
     if query_lower in candidate_lower:
         # Bonus for exact match at start
         if candidate_lower.startswith(query_lower):
-            return 0.95 + (0.05 * (len(query) / len(candidate)))
-        return 0.85 + (0.10 * (len(query) / len(candidate)))
+            return 0.95 + (0.05 * (len(query_lower) / len(candidate_lower)))
+        return 0.85 + (0.10 * (len(query_lower) / len(candidate_lower)))
 
     # Calculate normalized Levenshtein similarity
     max_len = max(len(query_lower), len(candidate_lower))

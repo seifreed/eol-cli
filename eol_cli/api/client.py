@@ -68,7 +68,7 @@ class EOLClient:
             EOLRateLimitError: If rate limit is exceeded (429)
             EOLAPIError: For other API errors
         """
-        url = f"{self.base_url}{endpoint}"
+        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
 
         # 1. Network request — catch transport-level failures
         try:
@@ -81,9 +81,7 @@ class EOLClient:
             raise EOLNotFoundError(f"Resource not found: {endpoint}")
         if response.status_code == 429:
             retry_after = response.headers.get("Retry-After", "unknown")
-            raise EOLRateLimitError(
-                f"Rate limit exceeded. Retry after: {retry_after} seconds"
-            )
+            raise EOLRateLimitError(f"Rate limit exceeded. Retry after: {retry_after} seconds")
 
         # 3. HTTP error check + JSON deserialization
         try:

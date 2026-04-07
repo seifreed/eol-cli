@@ -12,9 +12,7 @@ from typing import Any
 
 from eol_cli._version import __version__
 
-_SARIF_SCHEMA = (
-    "https://docs.oasis-open.org/sarif/sarif/v2.1.0/schemas/sarif-schema-2.1.0.json"
-)
+_SARIF_SCHEMA = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/schemas/sarif-schema-2.1.0.json"
 
 _RULE_EOL = "EOL001"
 _RULE_ACTIVE = "EOL002"
@@ -47,13 +45,11 @@ def _build_tool() -> dict[str, Any]:
     }
 
 
-def _release_to_result(
-    product_name: str, release: dict[str, Any]
-) -> dict[str, Any]:
+def _release_to_result(product_name: str, release: dict[str, Any]) -> dict[str, Any]:
     """Convert a single release object into a SARIF result."""
     is_eol = release.get("isEol", False)
     release_cycle = release.get("name", "unknown")
-    eol_date = release.get("eolFrom", "N/A")
+    eol_date = release.get("eolFrom") or "N/A"
     prefix = f"{product_name} {release_cycle}" if product_name else release_cycle
 
     if is_eol:
@@ -63,7 +59,7 @@ def _release_to_result(
     else:
         level = "note"
         rule_id = _RULE_ACTIVE
-        eol_info = f", EOL scheduled: {eol_date}" if eol_date != "N/A" else ""
+        eol_info = f", EOL scheduled: {eol_date}" if eol_date and eol_date != "N/A" else ""
         msg = f"{prefix}: Active{eol_info}"
 
     result: dict[str, Any] = {
@@ -72,12 +68,12 @@ def _release_to_result(
         "message": {"text": msg},
         "properties": {
             "product": product_name,
-            "release": release.get("name", ""),
-            "releaseDate": release.get("releaseDate"),
+            "release": release.get("name") or "",
+            "releaseDate": release.get("releaseDate") or "",
             "isEol": is_eol,
-            "eolFrom": release.get("eolFrom"),
-            "isLts": release.get("isLts", False),
-            "isMaintained": release.get("isMaintained"),
+            "eolFrom": release.get("eolFrom") or "",
+            "isLts": release.get("isLts") or False,
+            "isMaintained": release.get("isMaintained") or False,
         },
     }
     return result
@@ -114,12 +110,14 @@ def _extract_results(data: dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(result_obj, list):
         for item in result_obj:
             name = item.get("name", "unknown")
-            results.append({
-                "ruleId": _RULE_ACTIVE,
-                "level": "note",
-                "message": {"text": f"{name}: {item.get('uri', '')}"},
-                "properties": item,
-            })
+            results.append(
+                {
+                    "ruleId": _RULE_ACTIVE,
+                    "level": "note",
+                    "message": {"text": f"{name}: {item.get('uri', '')}"},
+                    "properties": item,
+                }
+            )
         return results
 
     return results
