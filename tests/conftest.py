@@ -10,7 +10,7 @@ from eol_cli.api.client import EOLClient
 
 
 @pytest.fixture
-def client_obj(request: pytest.FixtureRequest) -> Generator[dict[str, EOLClient], None, None]:
+def client_obj(request: pytest.FixtureRequest) -> Generator[dict[str, EOLClient]]:
     """Provide a shared EOLClient via Click's obj dict.
 
     Requires network access. Skips if the requesting test is not marked @pytest.mark.api.

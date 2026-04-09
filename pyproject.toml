@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=80.0", "setuptools-scm[simple]>=9.2", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "eol-cli"
-version = "0.1.0"
+dynamic = ["version"]
 description = "CLI tool for endoflife.date API - Check EOL dates and support lifecycles"
 readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "MIT"}
+requires-python = ">=3.13,<3.15"
+license = "MIT"
 authors = [
     {name = "Marc Rivero", email = "mriverolopez@gmail.com"}
 ]
@@ -20,11 +20,7 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -65,13 +61,15 @@ where = ["."]
 include = ["eol_cli*"]
 exclude = ["tests*", "docs*"]
 
+[tool.setuptools_scm]
+
 [tool.black]
 line-length = 100
-target-version = ["py310", "py311", "py312", "py313", "py314"]
+target-version = ["py313", "py314"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = [
@@ -91,7 +89,7 @@ ignore = [
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

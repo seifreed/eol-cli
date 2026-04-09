@@ -1,4 +1,7 @@
-"""Version is read from installed package metadata (pyproject.toml is the single source of truth)."""
+"""Version is read from installed package metadata.
+
+The build version is derived from git tags via setuptools-scm when installed.
+"""
 
 from importlib.metadata import PackageNotFoundError, version
 

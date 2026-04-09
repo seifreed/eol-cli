@@ -32,7 +32,7 @@ class TestMainCLI:
         result = runner.invoke(main, ["--version"])
         if not (result.exit_code == 0):
             raise AssertionError
-        if "0.1.0" not in result.output:
+        if not result.output.startswith("eol-cli, version "):
             raise AssertionError
 
 
