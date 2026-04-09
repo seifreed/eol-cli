@@ -4,9 +4,12 @@
 def _get_ngrams(s: str, n: int) -> set[str]:
     """Generate character n-grams from *s*.
 
-    Returns an empty set when ``len(s) < n`` (no complete n-gram fits).
+    For strings shorter than n, returns individual characters as fallback.
     """
     s = s.lower()
+    if len(s) < n:
+        # For short strings, return individual characters as fallback
+        return set(s)
     return {s[i : i + n] for i in range(len(s) - n + 1)}
 
 
@@ -79,6 +82,10 @@ def _combined_similarity(query: str, candidate: str) -> float:
     query_lower = query.lower()
     candidate_lower = candidate.lower()
 
+    # Guard against empty strings (prevents division by zero)
+    if not query_lower or not candidate_lower:
+        return 0.0
+
     # Exact substring match gets highest score
     if query_lower in candidate_lower:
         # Bonus for exact match at start
@@ -115,6 +122,10 @@ def find_similar_products(
         List of tuples (product_name, similarity_score) sorted by score (highest first)
     """
     if not query or not all_products:
+        return []
+
+    # Validate max_results to prevent unexpected behavior with negative values
+    if max_results <= 0:
         return []
 
     # Calculate similarity scores for all products

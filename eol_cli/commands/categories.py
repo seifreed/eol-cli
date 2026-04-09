@@ -2,9 +2,12 @@
 
 import click
 
-from eol_cli.api.client import EOLAPIError, EOLNotFoundError
-from eol_cli.commands._output import emit, format_options, validate_format_options
+from eol_cli.application import GetCategoryProductsCommand, ListCategoriesCommand
+from eol_cli.commands._errors import handle_command_errors
+from eol_cli.commands._output import emit, format_options
 from eol_cli.formatters import format_product_list, format_uri_list
+from eol_cli.infrastructure import EOLCategoryGatewayAdapter
+from eol_cli.presentation.responses import response_payload
 
 
 @click.group(name="categories")
@@ -28,14 +31,17 @@ def list_categories(
         eol-cli categories list --xml
         eol-cli categories list --sarif
     """
-    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
-    try:
-        data = client.list_categories()
-        emit(data, output_json, output_xml, format_uri_list, output_sarif=output_sarif)
-    except EOLAPIError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from None
+    with handle_command_errors():
+        use_case = ListCategoriesCommand(category_gateway=EOLCategoryGatewayAdapter(client))
+        data = use_case.run()
+        emit(
+            response_payload(data),
+            output_json,
+            output_xml,
+            format_uri_list,
+            output_sarif=output_sarif,
+        )
 
 
 @categories.command(name="get")
@@ -55,17 +61,19 @@ def get_category(
         eol-cli categories get database --json
         eol-cli categories get os --sarif
     """
-    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
-    try:
-        data = client.get_category_products(category)
-        emit(data, output_json, output_xml, format_product_list, output_sarif=output_sarif)
-    except EOLNotFoundError:
-        click.echo(f"Error: Category '{category}' not found", err=True)
-        click.echo(
-            "Tip: Use 'eol-cli categories list' to see available categories", err=True
+    with handle_command_errors(on_not_found=lambda: _emit_category_not_found(category)):
+        use_case = GetCategoryProductsCommand(category_gateway=EOLCategoryGatewayAdapter(client))
+        data = use_case.run(category)
+        emit(
+            response_payload(data),
+            output_json,
+            output_xml,
+            format_product_list,
+            output_sarif=output_sarif,
         )
-        raise click.Abort() from None
-    except EOLAPIError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from None
+
+
+def _emit_category_not_found(category: str) -> None:
+    click.echo(f"Error: Category '{category}' not found", err=True)
+    click.echo("Tip: Use 'eol-cli categories list' to see available categories", err=True)

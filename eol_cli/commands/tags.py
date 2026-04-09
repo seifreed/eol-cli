@@ -2,9 +2,12 @@
 
 import click
 
-from eol_cli.api.client import EOLAPIError, EOLNotFoundError
-from eol_cli.commands._output import emit, format_options, validate_format_options
+from eol_cli.application import GetTagProductsCommand, ListTagsCommand
+from eol_cli.commands._errors import handle_command_errors
+from eol_cli.commands._output import emit, format_options
 from eol_cli.formatters import format_product_list, format_uri_list
+from eol_cli.infrastructure import EOLTagGatewayAdapter
+from eol_cli.presentation.responses import response_payload
 
 
 @click.group(name="tags")
@@ -17,9 +20,7 @@ def tags(ctx: click.Context) -> None:
 @tags.command(name="list")
 @format_options
 @click.pass_context
-def list_tags(
-    ctx: click.Context, output_json: bool, output_xml: bool, output_sarif: bool
-) -> None:
+def list_tags(ctx: click.Context, output_json: bool, output_xml: bool, output_sarif: bool) -> None:
     """List all available tags.
 
     Examples:
@@ -27,14 +28,17 @@ def list_tags(
         eol-cli tags list --json
         eol-cli tags list --sarif
     """
-    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
-    try:
-        data = client.list_tags()
-        emit(data, output_json, output_xml, format_uri_list, output_sarif=output_sarif)
-    except EOLAPIError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from None
+    with handle_command_errors():
+        use_case = ListTagsCommand(tag_gateway=EOLTagGatewayAdapter(client))
+        data = use_case.run()
+        emit(
+            response_payload(data),
+            output_json,
+            output_xml,
+            format_uri_list,
+            output_sarif=output_sarif,
+        )
 
 
 @tags.command(name="get")
@@ -54,15 +58,19 @@ def get_tag(
         eol-cli tags get microsoft --json
         eol-cli tags get linux-distribution --sarif
     """
-    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
-    try:
-        data = client.get_tag_products(tag)
-        emit(data, output_json, output_xml, format_product_list, output_sarif=output_sarif)
-    except EOLNotFoundError:
-        click.echo(f"Error: Tag '{tag}' not found", err=True)
-        click.echo("Tip: Use 'eol-cli tags list' to see available tags", err=True)
-        raise click.Abort() from None
-    except EOLAPIError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from None
+    with handle_command_errors(on_not_found=lambda: _emit_tag_not_found(tag)):
+        use_case = GetTagProductsCommand(tag_gateway=EOLTagGatewayAdapter(client))
+        data = use_case.run(tag)
+        emit(
+            response_payload(data),
+            output_json,
+            output_xml,
+            format_product_list,
+            output_sarif=output_sarif,
+        )
+
+
+def _emit_tag_not_found(tag: str) -> None:
+    click.echo(f"Error: Tag '{tag}' not found", err=True)
+    click.echo("Tip: Use 'eol-cli tags list' to see available tags", err=True)

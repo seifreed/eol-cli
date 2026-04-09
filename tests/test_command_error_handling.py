@@ -1,6 +1,6 @@
 """Tests for CLI command error handling including API errors, validation errors, and exception paths."""
 
-import pathlib
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -12,6 +12,8 @@ from eol_cli.commands.identifiers import identifiers
 from eol_cli.commands.index import index
 from eol_cli.commands.products import products
 from eol_cli.commands.tags import tags
+from eol_cli.domain.contracts import ResponseEnvelope
+from eol_cli.presentation.responses import create_aggregated_response
 
 
 def _make_mock_client(**overrides):
@@ -29,28 +31,35 @@ class TestCategoriesErrorPaths:
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(categories, ["list", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_categories_list_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(list_categories=EOLAPIError("API Error"))
         result = runner.invoke(categories, ["list"], obj=obj)
-        assert result.exit_code == 1
-        assert "error" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "error" not in result.output.lower():
+            raise AssertionError
 
     def test_categories_get_json_xml_exclusive(self):
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(categories, ["get", "os", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_categories_get_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(get_category_products=EOLAPIError("API Error"))
         result = runner.invoke(categories, ["get", "os"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
 
 class TestTagsErrorPaths:
@@ -60,27 +69,33 @@ class TestTagsErrorPaths:
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(tags, ["list", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_tags_list_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(list_tags=EOLAPIError("API Error"))
         result = runner.invoke(tags, ["list"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
     def test_tags_get_json_xml_exclusive(self):
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(tags, ["get", "linux-distribution", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_tags_get_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(get_tag_products=EOLAPIError("API Error"))
         result = runner.invoke(tags, ["get", "test-tag"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
 
 class TestIdentifiersErrorPaths:
@@ -90,27 +105,33 @@ class TestIdentifiersErrorPaths:
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(identifiers, ["list", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_identifiers_list_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(list_identifier_types=EOLAPIError("API Error"))
         result = runner.invoke(identifiers, ["list"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
     def test_identifiers_get_json_xml_exclusive(self):
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(identifiers, ["get", "purl", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_identifiers_get_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(get_identifiers_by_type=EOLAPIError("API Error"))
         result = runner.invoke(identifiers, ["get", "purl"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
 
 class TestIndexErrorPaths:
@@ -120,14 +141,17 @@ class TestIndexErrorPaths:
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(index, ["--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_index_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(get_index=EOLAPIError("API Error"))
         result = runner.invoke(index, [], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
 
 class TestProductsErrorPaths:
@@ -137,34 +161,44 @@ class TestProductsErrorPaths:
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(products, ["list", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_products_list_api_error(self):
         runner = CliRunner()
         obj = _make_mock_client(list_products=EOLAPIError("API Error"))
         result = runner.invoke(products, ["list"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
     def test_products_get_json_xml_exclusive(self):
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(products, ["get", "python", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
     def test_products_get_api_error_single(self):
         runner = CliRunner()
         obj = _make_mock_client(get_product=EOLAPIError("API Error"))
         result = runner.invoke(products, ["get", "python"], obj=obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
 
     def test_products_release_json_xml_exclusive(self):
         runner = CliRunner()
         obj = _make_mock_client()
-        result = runner.invoke(products, ["release", "python", "latest", "--json", "--xml"], obj=obj)
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        result = runner.invoke(
+            products, ["release", "python", "latest", "--json", "--xml"], obj=obj
+        )
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -182,7 +216,8 @@ class TestAPIClientErrorHandling:
             with pytest.raises(EOLRateLimitError) as exc_info:
                 client._request("/test")
 
-            assert "60" in str(exc_info.value)
+            if "60" not in str(exc_info.value):
+                raise AssertionError
             client.close()
 
     def test_http_error_handling(self):
@@ -211,7 +246,8 @@ class TestAPIClientErrorHandling:
             with pytest.raises(EOLAPIError) as exc_info:
                 client._request("/test")
 
-            assert "Invalid JSON" in str(exc_info.value)
+            if "Invalid JSON" not in str(exc_info.value):
+                raise AssertionError
             client.close()
 
 
@@ -223,8 +259,10 @@ class TestProductsGetEdgePaths:
         runner = CliRunner()
         obj = _make_mock_client()
         result = runner.invoke(products, ["get", ",,,"], obj=obj)
-        assert result.exit_code == 1
-        assert "no valid product" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "no valid product" not in result.output.lower():
+            raise AssertionError
 
     def test_products_get_json_single(self):
         """JSON output for a single product goes through emit()."""
@@ -233,8 +271,10 @@ class TestProductsGetEdgePaths:
         obj = _make_mock_client()
         obj["client"].get_product.return_value = mock_data
         result = runner.invoke(products, ["get", "python", "--json"], obj=obj)
-        assert result.exit_code == 0
-        assert '"python"' in result.output
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if '"python"' not in result.output:
+            raise AssertionError
 
     def test_products_get_xml_multi(self):
         """XML output for multiple products aggregates and goes through emit()."""
@@ -243,14 +283,16 @@ class TestProductsGetEdgePaths:
         obj = _make_mock_client()
         obj["client"].get_product.return_value = mock_data
         result = runner.invoke(products, ["get", "a,b", "--xml"], obj=obj)
-        assert result.exit_code == 0
-        assert "<response>" in result.output
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if "<response>" not in result.output:
+            raise AssertionError
 
     def test_products_get_outer_api_error_catch(self):
         """EOLAPIError that bypasses inner handlers is caught by the outer except."""
         runner = CliRunner()
         # Make get_product return valid data, but make list_products (called in
-        # _handle_errors_and_suggestions for the not-found product) raise an
+        # error handling for the not-found product) raise an
         # EOLAPIError that propagates to the outer handler.
         from eol_cli.api.client import EOLNotFoundError
 
@@ -266,9 +308,41 @@ class TestProductsGetEdgePaths:
         obj["client"].get_product.side_effect = get_product_side_effect
         obj["client"].list_products.return_value = {"result": []}
         result = runner.invoke(products, ["get", "valid,invalid"], obj=obj)
-        # _fetch_products catches the NotFoundError, _handle_errors_and_suggestions
-        # prints warning and tries suggestions. The result still succeeds for valid.
-        assert "warning" in result.output.lower() or "not found" in result.output.lower()
+        # Use-case catches the NotFoundError, command feedback prints warning and
+        # tries suggestions. The result still succeeds for valid products.
+        if not ("warning" in result.output.lower() or "not found" in result.output.lower()):
+            raise AssertionError
+
+    def test_products_get_json_with_partial_results_includes_meta_summary(self):
+        """JSON output includes fetch summary metadata when some products are not found."""
+        runner = CliRunner()
+        from eol_cli.api.client import EOLNotFoundError
+
+        def get_product_side_effect(name):
+            if name == "python":
+                return {"schema_version": "1.2.0", "result": {"name": "python", "releases": []}}
+            raise EOLNotFoundError(f"Not found: {name}")
+
+        obj = _make_mock_client()
+        obj["client"].get_product.side_effect = get_product_side_effect
+        obj["client"].list_products.return_value = {"result": [{"name": "python"}], "total": 1}
+
+        result = runner.invoke(products, ["get", "python,invalid-xyz", "--json"], obj=obj)
+        if not (result.exit_code == 0):
+            raise AssertionError
+
+        payload = json.loads(result.stdout)
+        if "meta" not in payload:
+            raise AssertionError
+        fetch_summary = payload["meta"]["fetch_summary"]
+        if not (fetch_summary["requested"] == 2):
+            raise AssertionError
+        if not (fetch_summary["succeeded"] == 1):
+            raise AssertionError
+        if not (fetch_summary["failed"] == 1):
+            raise AssertionError
+        if "invalid-xyz" not in fetch_summary["not_found"][0]:
+            raise AssertionError
 
     def test_products_get_suggestion_rate_limited(self):
         """Rate limit error during suggestion fetch shows specific message."""
@@ -280,8 +354,10 @@ class TestProductsGetEdgePaths:
             list_products=EOLRateLimitError("rate limited"),
         )
         result = runner.invoke(products, ["get", "pythn"], obj=obj)
-        assert result.exit_code == 1
-        assert "rate limited" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "rate limited" not in result.output.lower():
+            raise AssertionError
 
     def test_products_get_suggestion_api_error(self):
         """Generic API error during suggestion fetch shows fallback message."""
@@ -293,8 +369,10 @@ class TestProductsGetEdgePaths:
             list_products=EOLAPIError("server down"),
         )
         result = runner.invoke(products, ["get", "pythn"], obj=obj)
-        assert result.exit_code == 1
-        assert "could not fetch suggestions" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "could not fetch suggestions" not in result.output.lower():
+            raise AssertionError
 
 
 class TestProductsReleaseErrorPath:
@@ -304,25 +382,29 @@ class TestProductsReleaseErrorPath:
         runner = CliRunner()
         obj = _make_mock_client(get_product_release=EOLAPIError("API Error"))
         result = runner.invoke(products, ["release", "python", "3.11"], obj=obj)
-        assert result.exit_code == 1
-        assert "error" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "error" not in result.output.lower():
+            raise AssertionError
 
     def test_products_release_latest_api_error(self):
         """EOLAPIError (not NotFound) on latest release is caught."""
         runner = CliRunner()
         obj = _make_mock_client(get_product_latest_release=EOLAPIError("Server Error"))
         result = runner.invoke(products, ["release", "python", "latest"], obj=obj)
-        assert result.exit_code == 1
-        assert "error" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "error" not in result.output.lower():
+            raise AssertionError
 
     def test_products_get_outer_except_api_error(self):
         """EOLAPIError raised after fetch/suggestions is caught by outer handler."""
         runner = CliRunner()
         # Make get_product succeed, then make the data trigger an error during
-        # output by returning data that causes _create_aggregated_response to
-        # access all_data[0] on an empty list — but _handle_errors raises Abort
-        # before that. The only way to reach lines 187-189 is if something
-        # between _handle_errors and the end of the try block raises EOLAPIError.
+        # output by returning data that causes create_aggregated_response to
+        # access all_data[0] on an empty list — but command abort handling raises Abort
+        # before that. The only way to reach this path is if something
+        # between error handling and the end of the try block raises EOLAPIError.
         # We simulate this by patching _output_rich_format to raise.
         obj = _make_mock_client()
         obj["client"].get_product.return_value = {
@@ -334,8 +416,10 @@ class TestProductsReleaseErrorPath:
             side_effect=EOLAPIError("Unexpected render error"),
         ):
             result = runner.invoke(products, ["get", "python"], obj=obj)
-        assert result.exit_code == 1
-        assert "unexpected render error" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "unexpected render error" not in result.output.lower():
+            raise AssertionError
 
 
 class TestCLIMainErrorPath:
@@ -346,15 +430,100 @@ class TestCLIMainErrorPath:
 
         runner = CliRunner()
         result = runner.invoke(main, ["--nonexistent-option"])
-        assert result.exit_code != 0
+        if not (result.exit_code != 0):
+            raise AssertionError
 
     def test_cli_main_direct_execution(self):
         from eol_cli.cli import main
 
         runner = CliRunner()
         result = runner.invoke(main, ["--version"])
-        assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if "0.1.0" not in result.output:
+            raise AssertionError
+
+
+class TestCreateAggregatedResponse:
+    """Test create_aggregated_response function edge cases."""
+
+    def test_create_aggregated_response_empty_list_raises(self):
+        """Test that create_aggregated_response raises on empty list."""
+        with pytest.raises(ValueError, match="empty list"):
+            create_aggregated_response([])
+
+    def test_create_aggregated_response_single_product(self):
+        """Test that create_aggregated_response works with single product."""
+        data = [ResponseEnvelope(schema_version="1.2.0", result={"name": "python"})]
+        result = create_aggregated_response(data)
+        if not (result["total"] == 1):
+            raise AssertionError
+        if not (result["schema_version"] == "1.2.0"):
+            raise AssertionError
+        if not (len(result["products"]) == 1):
+            raise AssertionError
+
+    def test_create_aggregated_response_multiple_products(self):
+        """Test that create_aggregated_response works with multiple products."""
+        data = [
+            ResponseEnvelope(schema_version="1.2.0", result={"name": "python"}),
+            ResponseEnvelope(schema_version="1.2.0", result={"name": "nodejs"}),
+        ]
+        result = create_aggregated_response(data)
+        if not (result["total"] == 2):
+            raise AssertionError
+        if not (len(result["products"]) == 2):
+            raise AssertionError
+
+    def test_create_aggregated_response_uses_highest_schema_version(self):
+        """Test that create_aggregated_response picks the highest schema version."""
+        data = [
+            ResponseEnvelope(schema_version="1.9.0", result={"name": "python"}),
+            ResponseEnvelope(schema_version="1.10.0", result={"name": "nodejs"}),
+            ResponseEnvelope(schema_version="1.2.1", result={"name": "go"}),
+        ]
+        result = create_aggregated_response(data)
+        if not (result["schema_version"] == "1.10.0"):
+            raise AssertionError
+
+
+class TestNon404ErrorSuggestions:
+    """Test that suggestions are shown for non-404 API errors."""
+
+    def test_no_suggestions_on_rate_limit_error(self):
+        """Test that suggestions are NOT shown on rate limit errors.
+
+        The product might exist, we just couldn't fetch it due to rate limiting.
+        Showing suggestions would be misleading.
+        """
+        runner = CliRunner()
+        from eol_cli.api.client import EOLRateLimitError
+
+        obj = _make_mock_client()
+        obj["client"].get_product.side_effect = EOLRateLimitError("Rate limit exceeded")
+        result = runner.invoke(products, ["get", "pythn"], obj=obj)
+        # Should show error but NOT suggestions - product might exist
+        if not ("Rate limit" in result.output or "rate limit" in result.output.lower()):
+            raise AssertionError
+        if not ("Did you mean" not in result.output):
+            raise AssertionError
+
+    def test_no_suggestions_on_generic_api_error(self):
+        """Test that suggestions are NOT shown on generic API errors.
+
+        The product might exist, we just couldn't fetch it due to server error.
+        Showing suggestions would be misleading.
+        """
+        runner = CliRunner()
+
+        obj = _make_mock_client()
+        obj["client"].get_product.side_effect = EOLAPIError("Server error")
+        result = runner.invoke(products, ["get", "pythn"], obj=obj)
+        # Should show error but NOT suggestions - product might exist
+        if "Server error" not in result.output:
+            raise AssertionError
+        if not ("Did you mean" not in result.output):
+            raise AssertionError
 
 
 class TestVersionFallback:
@@ -364,15 +533,14 @@ class TestVersionFallback:
         """PackageNotFoundError triggers the dev fallback."""
         from importlib.metadata import PackageNotFoundError
 
-        with patch(
-            "importlib.metadata.version", side_effect=PackageNotFoundError("eol-cli")
-        ):
+        with patch("importlib.metadata.version", side_effect=PackageNotFoundError("eol-cli")):
             import importlib
 
             import eol_cli._version
 
             importlib.reload(eol_cli._version)
-            assert eol_cli._version.__version__ == "0.0.0-dev"
+            if not (eol_cli._version.__version__ == "0.0.0-dev"):
+                raise AssertionError
 
         # Restore
         import importlib
@@ -387,13 +555,13 @@ class TestCLIMainGuard:
 
     def test_main_module_execution(self):
         """Running cli.py as __main__ invokes main()."""
-        import subprocess
+        import runpy
+        import sys
 
-        result = subprocess.run(
-            ["python", "-c", "import runpy; runpy.run_module('eol_cli.cli', run_name='__main__', alter_sys=True)"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
+        sys.modules.pop("eol_cli.cli", None)
+        with pytest.raises(SystemExit) as exc_info:
+            runpy.run_module("eol_cli.cli", run_name="__main__", alter_sys=True)
+
         # Will show help/usage since no args, or version error — either way it ran
-        assert result.returncode in (0, 2)
+        if exc_info.value.code not in (0, 2):
+            raise AssertionError

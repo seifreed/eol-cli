@@ -2,9 +2,12 @@
 
 import click
 
-from eol_cli.api.client import EOLAPIError, EOLNotFoundError
-from eol_cli.commands._output import emit, format_options, validate_format_options
+from eol_cli.application import GetIdentifiersByTypeCommand, ListIdentifierTypesCommand
+from eol_cli.commands._errors import handle_command_errors
+from eol_cli.commands._output import emit, format_options
 from eol_cli.formatters import format_identifier_list, format_uri_list
+from eol_cli.infrastructure import EOLIdentifierGatewayAdapter
+from eol_cli.presentation.responses import response_payload
 
 
 @click.group(name="identifiers")
@@ -29,14 +32,19 @@ def list_identifier_types(
         eol-cli identifiers list --json
         eol-cli identifiers list --sarif
     """
-    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
-    try:
-        data = client.list_identifier_types()
-        emit(data, output_json, output_xml, format_uri_list, output_sarif=output_sarif)
-    except EOLAPIError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from None
+    with handle_command_errors():
+        use_case = ListIdentifierTypesCommand(
+            identifier_gateway=EOLIdentifierGatewayAdapter(client)
+        )
+        data = use_case.run()
+        emit(
+            response_payload(data),
+            output_json,
+            output_xml,
+            format_uri_list,
+            output_sarif=output_sarif,
+        )
 
 
 @identifiers.command(name="get")
@@ -44,7 +52,11 @@ def list_identifier_types(
 @format_options
 @click.pass_context
 def get_identifiers(
-    ctx: click.Context, identifier_type: str, output_json: bool, output_xml: bool, output_sarif: bool
+    ctx: click.Context,
+    identifier_type: str,
+    output_json: bool,
+    output_xml: bool,
+    output_sarif: bool,
 ) -> None:
     """Get all identifiers for a specific type.
 
@@ -56,15 +68,21 @@ def get_identifiers(
         eol-cli identifiers get repology --json
         eol-cli identifiers get purl --sarif
     """
-    validate_format_options(output_json, output_xml, output_sarif)
     client = ctx.obj["client"]
-    try:
-        data = client.get_identifiers_by_type(identifier_type)
-        emit(data, output_json, output_xml, format_identifier_list, output_sarif=output_sarif)
-    except EOLNotFoundError:
-        click.echo(f"Error: Identifier type '{identifier_type}' not found", err=True)
-        click.echo("Tip: Use 'eol-cli identifiers list' to see available types", err=True)
-        raise click.Abort() from None
-    except EOLAPIError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from None
+    with handle_command_errors(on_not_found=lambda: _emit_identifier_not_found(identifier_type)):
+        use_case = GetIdentifiersByTypeCommand(
+            identifier_gateway=EOLIdentifierGatewayAdapter(client)
+        )
+        data = use_case.run(identifier_type)
+        emit(
+            response_payload(data),
+            output_json,
+            output_xml,
+            format_identifier_list,
+            output_sarif=output_sarif,
+        )
+
+
+def _emit_identifier_not_found(identifier_type: str) -> None:
+    click.echo(f"Error: Identifier type '{identifier_type}' not found", err=True)
+    click.echo("Tip: Use 'eol-cli identifiers list' to see available types", err=True)

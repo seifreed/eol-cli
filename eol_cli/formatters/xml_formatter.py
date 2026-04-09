@@ -1,10 +1,7 @@
 """XML output formatter."""
 
 import re
-import xml.etree.ElementTree as ET
 from typing import Any
-from xml.dom import minidom
-
 
 _PLURAL_TO_SINGULAR: dict[str, str] = {
     "releases": "release",
@@ -15,6 +12,9 @@ _PLURAL_TO_SINGULAR: dict[str, str] = {
     "products": "product",
     "categories": "category",
     "items": "item",
+    "links": "link",
+    "cycles": "cycle",
+    "versions": "version",
 }
 
 # XML element names must start with a letter or underscore, and contain only
@@ -31,31 +31,51 @@ def _sanitize_key(key: str) -> str:
     return safe
 
 
-def _dict_to_xml(parent: ET.Element, data: Any, item_name: str = "item") -> None:
-    """Convert a dictionary or list to XML elements recursively.
+def _escape_xml(text: str) -> str:
+    """Escape XML special characters in text nodes."""
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
 
-    Args:
-        parent: Parent XML element
-        data: Data to convert (dict, list, or primitive)
-        item_name: Name to use for list items
-    """
+
+def _xml_lines(
+    name: str, data: Any, item_name: str = "item", level: int = 0, pretty: bool = True
+) -> list[str]:
+    """Convert a dictionary, list, or primitive into XML lines."""
+    indent = ("  " * level) if pretty else ""
     if isinstance(data, dict):
+        dict_lines = [f"{indent}<{name}>"]
         for key, value in data.items():
             safe_key = _sanitize_key(key)
-            child = ET.SubElement(parent, safe_key)
             singular = _PLURAL_TO_SINGULAR.get(safe_key, safe_key)
-            _dict_to_xml(child, value, item_name=singular)
-    elif isinstance(data, list):
+            dict_lines.extend(
+                _xml_lines(safe_key, value, item_name=singular, level=level + 1, pretty=pretty)
+            )
+        dict_lines.append(f"{indent}</{name}>")
+        return dict_lines
+
+    if isinstance(data, list):
+        item_lines: list[str] = [f"{indent}<{name}>"]
         for item in data:
-            child = ET.SubElement(parent, item_name)
-            _dict_to_xml(child, item, item_name)
-    elif data is None:
-        parent.text = ""
-        parent.set("nil", "true")
-    elif isinstance(data, bool):
-        parent.text = "true" if data else "false"
+            item_lines.extend(
+                _xml_lines(item_name, item, item_name=item_name, level=level + 1, pretty=pretty)
+            )
+        item_lines.append(f"{indent}</{name}>")
+        return item_lines
+
+    if data is None:
+        return [f'{indent}<{name} nil="true" />']
+
+    if isinstance(data, bool):
+        text = "true" if data else "false"
     else:
-        parent.text = str(data)
+        text = _escape_xml(str(data))
+
+    return [f"{indent}<{name}>{text}</{name}>"]
 
 
 def format_xml(data: dict[str, Any], pretty: bool = True) -> str:
@@ -68,15 +88,8 @@ def format_xml(data: dict[str, Any], pretty: bool = True) -> str:
     Returns:
         Formatted XML string
     """
-    root = ET.Element("response")
-    _dict_to_xml(root, data)
-
+    body = _xml_lines("response", data, level=0, pretty=pretty)
+    xml_declaration = '<?xml version="1.0" ?>'
     if pretty:
-        xml_str = ET.tostring(root, encoding="unicode")
-        dom = minidom.parseString(xml_str)
-        raw = dom.toprettyxml(indent="  ", encoding=None)
-        # minidom inserts a blank line after the XML declaration; strip it
-        return "\n".join(line for line in raw.splitlines() if line.strip())
-    else:
-        xml_declaration = '<?xml version="1.0" ?>\n'
-        return xml_declaration + ET.tostring(root, encoding="unicode")
+        return xml_declaration + "\n" + "\n".join(body)
+    return xml_declaration + "".join(body)

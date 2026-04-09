@@ -1,6 +1,8 @@
 """API client for endoflife.date API v1.2.0."""
 
-from typing import Any
+import time
+from typing import Any, NoReturn, cast
+from urllib.parse import quote
 
 import requests
 from requests.exceptions import HTTPError, JSONDecodeError, RequestException
@@ -13,7 +15,9 @@ API_SCHEMA_VERSION = "1.2.0"
 class EOLAPIError(Exception):
     """Base exception for EOL API errors."""
 
-    pass
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class EOLNotFoundError(EOLAPIError):
@@ -54,11 +58,75 @@ class EOLClient:
             }
         )
 
-    def _request(self, endpoint: str) -> dict[str, Any]:
-        """Make a request to the API.
+    @staticmethod
+    def _build_url(base_url: str, endpoint: str) -> str:
+        """Build the final endpoint URL."""
+        return f"{base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+
+    def _dispatch_status(self, endpoint: str, response: requests.Response) -> None:
+        """Translate HTTP statuses to domain-specific exceptions when needed."""
+        if response.status_code == 404:
+            raise EOLNotFoundError(f"Resource not found: {endpoint}")
+        if response.status_code == 429:
+            retry_after = response.headers.get("Retry-After", "unknown")
+            raise EOLRateLimitError(f"Rate limit exceeded. Retry after: {retry_after}")
+        response.raise_for_status()
+
+    @staticmethod
+    def _extract_status_code(error: Exception) -> int | None:
+        """Read status code from known error shapes."""
+        if isinstance(error, EOLAPIError):
+            return error.status_code
+        response = getattr(error, "response", None)
+        if response is not None:
+            status_code = getattr(response, "status_code", None)
+            if isinstance(status_code, int):
+                return status_code
+        return None
+
+    def _should_retry(self, error: Exception, attempt: int, max_retries: int) -> bool:
+        """Return True when an error is transient and retries remain."""
+        if attempt >= max_retries:
+            return False
+        if isinstance(error, RequestException):
+            return not isinstance(error, HTTPError)
+        if not isinstance(error, HTTPError):
+            return False
+        status_code = self._extract_status_code(error)
+        return status_code is not None and status_code >= 500
+
+    @staticmethod
+    def _should_retry_delay(attempt: int) -> float:
+        """Compute exponential backoff delay for a retry attempt."""
+        return float(2**attempt)
+
+    @staticmethod
+    def _parse_json(response: requests.Response) -> dict[str, Any]:
+        """Parse response body as JSON."""
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise EOLAPIError("Invalid JSON response from API: expected an object")
+        return cast(dict[str, Any], payload)
+
+    def _raise_final_error(
+        self, endpoint: str, max_retries: int, last_error: Exception | None
+    ) -> NoReturn:
+        """Raise a final aggregated API error after retries are exhausted."""
+        status_code = self._extract_status_code(last_error) if last_error else None
+        raise EOLAPIError(
+            (
+                f"Request failed after {max_retries} retries ({max_retries + 1} attempts): "
+                f"{last_error}"
+            ),
+            status_code=status_code,
+        )
+
+    def _request(self, endpoint: str, max_retries: int = 3) -> dict[str, Any]:
+        """Make a request to the API with retry logic for transient failures.
 
         Args:
             endpoint: API endpoint path
+            max_retries: Maximum number of retry attempts (default: 3)
 
         Returns:
             JSON response as dictionary
@@ -68,29 +136,32 @@ class EOLClient:
             EOLRateLimitError: If rate limit is exceeded (429)
             EOLAPIError: For other API errors
         """
-        url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
+        url = self._build_url(self.base_url, endpoint)
+        last_error: Exception | None = None
 
-        # 1. Network request — catch transport-level failures
-        try:
-            response = self.session.get(url, timeout=self.timeout)
-        except RequestException as e:
-            raise EOLAPIError(f"Request failed: {e}") from e
+        for attempt in range(max_retries + 1):  # 1 initial + max_retries retries
+            try:
+                response = self.session.get(url, timeout=self.timeout)
+                self._dispatch_status(endpoint, response)
+                return self._parse_json(response)
+            except HTTPError as e:
+                last_error = e
+                status_code = self._extract_status_code(e)
+                if status_code is not None and 400 <= status_code < 500:
+                    raise EOLAPIError(f"HTTP error occurred: {e}", status_code=status_code) from e
+                if self._should_retry(e, attempt, max_retries):
+                    time.sleep(self._should_retry_delay(attempt))
+                    continue
+            except RequestException as e:
+                last_error = e
+                if self._should_retry(e, attempt, max_retries):
+                    time.sleep(self._should_retry_delay(attempt))
+                    continue
+            except (JSONDecodeError, ValueError) as e:
+                raise EOLAPIError(f"Invalid JSON response from API: {e}") from e
 
-        # 2. Status-code dispatch — raise typed exceptions for known codes
-        if response.status_code == 404:
-            raise EOLNotFoundError(f"Resource not found: {endpoint}")
-        if response.status_code == 429:
-            retry_after = response.headers.get("Retry-After", "unknown")
-            raise EOLRateLimitError(f"Rate limit exceeded. Retry after: {retry_after} seconds")
-
-        # 3. HTTP error check + JSON deserialization
-        try:
-            response.raise_for_status()
-            return response.json()
-        except HTTPError as e:
-            raise EOLAPIError(f"HTTP error occurred: {e}") from e
-        except (JSONDecodeError, ValueError) as e:
-            raise EOLAPIError(f"Invalid JSON response: {e}") from e
+        # All retries exhausted for transient errors (5xx, network)
+        self._raise_final_error(endpoint, max_retries, last_error)
 
     # Index endpoint
     def get_index(self) -> dict[str, Any]:
@@ -127,7 +198,7 @@ class EOLClient:
         Returns:
             Dictionary with schema_version, last_modified, and result (product details)
         """
-        return self._request(f"/products/{product}")
+        return self._request(f"/products/{quote(product, safe='')}")
 
     def get_product_release(self, product: str, release: str) -> dict[str, Any]:
         """Get information about a specific product release cycle.
@@ -139,7 +210,9 @@ class EOLClient:
         Returns:
             Dictionary with schema_version and result (release information)
         """
-        return self._request(f"/products/{product}/releases/{release}")
+        return self._request(
+            f"/products/{quote(product, safe='')}/releases/{quote(release, safe='')}"
+        )
 
     def get_product_latest_release(self, product: str) -> dict[str, Any]:
         """Get the latest release cycle for a product.
@@ -150,7 +223,7 @@ class EOLClient:
         Returns:
             Dictionary with schema_version and result (latest release information)
         """
-        return self._request(f"/products/{product}/releases/latest")
+        return self._request(f"/products/{quote(product, safe='')}/releases/latest")
 
     # Categories endpoints
     def list_categories(self) -> dict[str, Any]:
@@ -170,7 +243,7 @@ class EOLClient:
         Returns:
             Dictionary with schema_version, total, and result (list of products)
         """
-        return self._request(f"/categories/{category}")
+        return self._request(f"/categories/{quote(category, safe='')}")
 
     # Tags endpoints
     def list_tags(self) -> dict[str, Any]:
@@ -190,7 +263,7 @@ class EOLClient:
         Returns:
             Dictionary with schema_version, total, and result (list of products)
         """
-        return self._request(f"/tags/{tag}")
+        return self._request(f"/tags/{quote(tag, safe='')}")
 
     # Identifiers endpoints
     def list_identifier_types(self) -> dict[str, Any]:
@@ -210,7 +283,7 @@ class EOLClient:
         Returns:
             Dictionary with schema_version, total, and result (list of identifiers with products)
         """
-        return self._request(f"/identifiers/{identifier_type}")
+        return self._request(f"/identifiers/{quote(identifier_type, safe='')}")
 
     def close(self) -> None:
         """Close the HTTP session."""

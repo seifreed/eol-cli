@@ -1,5 +1,6 @@
 """Shared fixtures for eol-cli tests."""
 
+from collections.abc import Callable, Generator
 from io import StringIO
 
 import pytest
@@ -9,7 +10,7 @@ from eol_cli.api.client import EOLClient
 
 
 @pytest.fixture
-def client_obj(request: pytest.FixtureRequest) -> dict:
+def client_obj(request: pytest.FixtureRequest) -> Generator[dict[str, EOLClient], None, None]:
     """Provide a shared EOLClient via Click's obj dict.
 
     Requires network access. Skips if the requesting test is not marked @pytest.mark.api.
@@ -23,7 +24,7 @@ def client_obj(request: pytest.FixtureRequest) -> dict:
 
 
 @pytest.fixture
-def make_console():
+def make_console() -> Callable[[], tuple[StringIO, Console]]:
     """Factory fixture: returns a (StringIO, Console) pair for capturing Rich output."""
 
     def _factory() -> tuple[StringIO, Console]:

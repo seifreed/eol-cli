@@ -1,10 +1,9 @@
 """Tests for formatters"""
 
 import json
-import xml.etree.ElementTree as ET
-from io import StringIO
 
 import pytest
+from defusedxml import ElementTree as ET
 
 from eol_cli.api.client import EOLClient
 from eol_cli.formatters import rich_formatter
@@ -22,19 +21,24 @@ class TestJSONFormatter:
 
         # Should be valid JSON
         parsed = json.loads(result)
-        assert parsed == data
+        if not (parsed == data):
+            raise AssertionError
 
         # Should be pretty-printed
-        assert "\n" in result
-        assert "  " in result
+        if "\n" not in result:
+            raise AssertionError
+        if "  " not in result:
+            raise AssertionError
 
     def test_format_json_nested_structure(self):
         """Test JSON formatting with nested structure."""
         data = {"level1": {"level2": {"level3": "deep value"}}, "array": [1, 2, 3]}
         result = format_json(data)
         parsed = json.loads(result)
-        assert parsed == data
-        assert parsed["level1"]["level2"]["level3"] == "deep value"
+        if not (parsed == data):
+            raise AssertionError
+        if not (parsed["level1"]["level2"]["level3"] == "deep value"):
+            raise AssertionError
 
     def test_format_json_with_unicode(self):
         """Test JSON formatting with Unicode characters."""
@@ -42,12 +46,16 @@ class TestJSONFormatter:
         result = format_json(data)
 
         parsed = json.loads(result)
-        assert parsed["name"] == "Python 🐍"
-        assert parsed["emoji"] == "✨"
+        if not (parsed["name"] == "Python 🐍"):
+            raise AssertionError
+        if not (parsed["emoji"] == "✨"):
+            raise AssertionError
 
         # Should preserve Unicode characters
-        assert "🐍" in result
-        assert "✨" in result
+        if "🐍" not in result:
+            raise AssertionError
+        if "✨" not in result:
+            raise AssertionError
 
     def test_format_json_custom_indent(self):
         """Test JSON formatting with custom indentation."""
@@ -55,15 +63,18 @@ class TestJSONFormatter:
         result = format_json(data, indent=4)
 
         # Should use 4 spaces for indentation
-        assert "    " in result
+        if "    " not in result:
+            raise AssertionError
 
     def test_format_json_with_null_values(self):
         """Test JSON formatting with null values."""
         data = {"key": None, "value": "test"}
         result = format_json(data)
         parsed = json.loads(result)
-        assert parsed["key"] is None
-        assert "null" in result
+        if parsed["key"] is not None:
+            raise AssertionError
+        if "null" not in result:
+            raise AssertionError
 
     @pytest.mark.api
     def test_format_json_with_real_api_data(self):
@@ -74,8 +85,10 @@ class TestJSONFormatter:
 
             # Should be valid JSON
             parsed = json.loads(result)
-            assert "schema_version" in parsed
-            assert "result" in parsed
+            if "schema_version" not in parsed:
+                raise AssertionError
+            if "result" not in parsed:
+                raise AssertionError
 
 
 class TestXMLFormatter:
@@ -88,16 +101,21 @@ class TestXMLFormatter:
 
         # Should be valid XML
         root = ET.fromstring(result)
-        assert root.tag == "response"
+        if not (root.tag == "response"):
+            raise AssertionError
 
         # Check values
         key_elem = root.find("key")
-        assert key_elem is not None
-        assert key_elem.text == "value"
+        if not (key_elem is not None):
+            raise AssertionError
+        if not (key_elem.text == "value"):
+            raise AssertionError
 
         number_elem = root.find("number")
-        assert number_elem is not None
-        assert number_elem.text == "42"
+        if not (number_elem is not None):
+            raise AssertionError
+        if not (number_elem.text == "42"):
+            raise AssertionError
 
     def test_format_xml_nested_structure(self):
         """Test XML formatting with nested structure."""
@@ -106,10 +124,13 @@ class TestXMLFormatter:
         root = ET.fromstring(result)
 
         parent = root.find("parent")
-        assert parent is not None
+        if not (parent is not None):
+            raise AssertionError
         child = parent.find("child")
-        assert child is not None
-        assert child.text == "value"
+        if not (child is not None):
+            raise AssertionError
+        if not (child.text == "value"):
+            raise AssertionError
 
     def test_format_xml_with_list(self):
         """Test XML formatting with lists."""
@@ -118,11 +139,15 @@ class TestXMLFormatter:
         root = ET.fromstring(result)
 
         items = root.find("items")
-        assert items is not None
+        if not (items is not None):
+            raise AssertionError
         item_elements = items.findall("item")
-        assert len(item_elements) == 3
-        assert item_elements[0].text == "item1"
-        assert item_elements[1].text == "item2"
+        if not (len(item_elements) == 3):
+            raise AssertionError
+        if not (item_elements[0].text == "item1"):
+            raise AssertionError
+        if not (item_elements[1].text == "item2"):
+            raise AssertionError
 
     def test_format_xml_with_null_values(self):
         """Test XML formatting with null values."""
@@ -131,10 +156,13 @@ class TestXMLFormatter:
         root = ET.fromstring(result)
 
         key_elem = root.find("key")
-        assert key_elem is not None
-        assert key_elem.get("nil") == "true"
+        if not (key_elem is not None):
+            raise AssertionError
+        if not (key_elem.get("nil") == "true"):
+            raise AssertionError
         # Text can be None or empty string for nil elements
-        assert key_elem.text in (None, "")
+        if key_elem.text not in (None, ""):
+            raise AssertionError
 
     def test_format_xml_pretty_print(self):
         """Test that XML is pretty printed."""
@@ -142,8 +170,10 @@ class TestXMLFormatter:
         result = format_xml(data, pretty=True)
 
         # Should have indentation
-        assert "\n" in result
-        assert "  " in result
+        if "\n" not in result:
+            raise AssertionError
+        if "  " not in result:
+            raise AssertionError
 
     def test_format_xml_no_pretty_print(self):
         """Test XML without pretty printing."""
@@ -152,7 +182,8 @@ class TestXMLFormatter:
 
         # Should be single line (mostly)
         lines = result.split("\n")
-        assert len(lines) <= 2  # May have XML declaration
+        if not (len(lines) <= 2):
+            raise AssertionError
 
     def test_format_xml_illegal_key_characters(self):
         """Keys with characters illegal in XML element names are sanitized."""
@@ -160,9 +191,12 @@ class TestXMLFormatter:
         result = format_xml(data)
         root = ET.fromstring(result)
         # @ becomes _, leading digit gets _ prefix, # becomes _
-        assert root.find("_context") is not None
-        assert root.find("_2nd_edition") is not None
-        assert root.find("_id") is not None
+        if not (root.find("_context") is not None):
+            raise AssertionError
+        if not (root.find("_2nd_edition") is not None):
+            raise AssertionError
+        if not (root.find("_id") is not None):
+            raise AssertionError
 
     @pytest.mark.api
     def test_format_xml_with_real_api_data(self):
@@ -173,14 +207,17 @@ class TestXMLFormatter:
 
             # Should be valid XML
             root = ET.fromstring(result)
-            assert root.tag == "response"
+            if not (root.tag == "response"):
+                raise AssertionError
 
             # Check structure
             schema = root.find("schema_version")
-            assert schema is not None
+            if not (schema is not None):
+                raise AssertionError
 
             result_elem = root.find("result")
-            assert result_elem is not None
+            if not (result_elem is not None):
+                raise AssertionError
 
 
 @pytest.mark.api
@@ -193,14 +230,16 @@ class TestRichFormatter:
             data = client.get_index()
             buf, c = make_console()
             rich_formatter.format_uri_list(data, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_uri_list_empty_data(self, make_console):
         """Test format_uri_list with empty data."""
         data = {"result": [], "total": 0}
         buf, c = make_console()
         rich_formatter.format_uri_list(data, console=c)
-        assert "No items found" in buf.getvalue()
+        if "No items found" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_product_list_with_real_data(self, make_console):
         """Test format_product_list with real API data."""
@@ -208,7 +247,8 @@ class TestRichFormatter:
             data = client.list_products()
             buf, c = make_console()
             rich_formatter.format_product_list(data, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_product_list_full_with_real_data(self, make_console):
         """Test format_product_list with full data."""
@@ -216,7 +256,8 @@ class TestRichFormatter:
             data = client.list_products_full()
             buf, c = make_console()
             rich_formatter.format_product_list(data, full=True, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_product_details_with_real_data(self, make_console):
         """Test format_product_details with real API data."""
@@ -224,7 +265,8 @@ class TestRichFormatter:
             data = client.get_product("python")
             buf, c = make_console()
             rich_formatter.format_product_details(data, show_all=False, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_product_details_show_all_with_real_data(self, make_console):
         """Test format_product_details with show_all=True."""
@@ -232,7 +274,8 @@ class TestRichFormatter:
             data = client.get_product("python")
             buf, c = make_console()
             rich_formatter.format_product_details(data, show_all=True, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_release_details_with_real_data(self, make_console):
         """Test format_release_details with real API data."""
@@ -240,7 +283,8 @@ class TestRichFormatter:
             data = client.get_product_release("python", "3.11")
             buf, c = make_console()
             rich_formatter.format_release_details(data, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_identifier_list_with_real_data(self, make_console):
         """Test format_identifier_list with real API data."""
@@ -248,33 +292,40 @@ class TestRichFormatter:
             data = client.get_identifiers_by_type("purl")
             buf, c = make_console()
             rich_formatter.format_identifier_list(data, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_format_date_function(self):
         """Test _format_date helper function."""
         # Test with valid date
         result = rich_formatter._format_date("2024-01-01")
-        assert "2024-01-01" in result
+        if "2024-01-01" not in result:
+            raise AssertionError
 
         # Test with None
         result = rich_formatter._format_date(None)
-        assert "N/A" in result or result == ""
+        if not ("N/A" in result or result == ""):
+            raise AssertionError
 
     def test_format_boolean_function(self):
         """Test _format_boolean helper function."""
         result_true = rich_formatter._format_boolean(True)
-        assert len(result_true) > 0
+        if not (len(result_true) > 0):
+            raise AssertionError
 
         result_false = rich_formatter._format_boolean(False)
-        assert len(result_false) > 0
+        if not (len(result_false) > 0):
+            raise AssertionError
 
     def test_format_eol_status_function(self):
         """Test _format_eol_status helper function."""
         result_eol = rich_formatter._format_eol_status(True, "2024-01-01")
-        assert len(result_eol) > 0
+        if not (len(result_eol) > 0):
+            raise AssertionError
 
         result_active = rich_formatter._format_eol_status(False, "2030-01-01")
-        assert len(result_active) > 0
+        if not (len(result_active) > 0):
+            raise AssertionError
 
 
 class TestFormatProductSuggestions:
@@ -286,15 +337,20 @@ class TestFormatProductSuggestions:
             "pythn", [("python", 0.92), ("pytorch", 0.45)], console=c
         )
         output = buf.getvalue()
-        assert "python" in output
-        assert "92.0%" in output
-        assert "pytorch" in output
-        assert "eol-cli products get python" in output
+        if "python" not in output:
+            raise AssertionError
+        if "92.0%" not in output:
+            raise AssertionError
+        if "pytorch" not in output:
+            raise AssertionError
+        if "eol-cli products get python" not in output:
+            raise AssertionError
 
     def test_empty_suggestions_prints_nothing(self, make_console):
         buf, c = make_console()
         rich_formatter.format_product_suggestions("xyz", [], console=c)
-        assert buf.getvalue() == ""
+        if not (buf.getvalue() == ""):
+            raise AssertionError
 
 
 class TestXMLSingularization:
@@ -305,14 +361,16 @@ class TestXMLSingularization:
         root = ET.fromstring(format_xml(data))
         releases = root.find("releases")
         children = list(releases)
-        assert all(child.tag == "release" for child in children)
+        if not (all(child.tag == "release" for child in children)):
+            raise AssertionError
 
     def test_tags_uses_tag_element(self):
         data = {"tags": ["linux", "server"]}
         root = ET.fromstring(format_xml(data))
         tags_elem = root.find("tags")
         children = list(tags_elem)
-        assert all(child.tag == "tag" for child in children)
+        if not (all(child.tag == "tag" for child in children)):
+            raise AssertionError
 
     def test_status_key_not_mangled(self):
         data = {"status": ["active", "inactive"]}
@@ -320,14 +378,16 @@ class TestXMLSingularization:
         status = root.find("status")
         children = list(status)
         # 'status' is not in the plural map, so children keep 'status' as tag
-        assert all(child.tag == "status" for child in children)
+        if not (all(child.tag == "status" for child in children)):
+            raise AssertionError
 
     def test_aliases_uses_alias_tag(self):
         data = {"aliases": ["ubuntu-lts", "ubuntu"]}
         root = ET.fromstring(format_xml(data))
         aliases = root.find("aliases")
         children = list(aliases)
-        assert all(child.tag == "alias" for child in children)
+        if not (all(child.tag == "alias" for child in children)):
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -341,19 +401,22 @@ class TestFormattersIntegration:
 
             # JSON formatting
             json_result = format_json(data)
-            assert len(json_result) > 0
+            if not (len(json_result) > 0):
+                raise AssertionError
             json.loads(json_result)  # Validate JSON
 
             # XML formatting
             xml_result = format_xml(data)
-            assert len(xml_result) > 0
+            if not (len(xml_result) > 0):
+                raise AssertionError
             ET.fromstring(xml_result)  # Validate XML
 
             # Rich formatting
             buf, c = make_console()
             rich_formatter.format_product_details(data, console=c)
             rich_result = buf.getvalue()
-            assert len(rich_result) > 0
+            if not (len(rich_result) > 0):
+                raise AssertionError
 
     def test_formatters_with_multiple_products(self):
         """Test formatters with aggregated multiple product data."""
@@ -366,10 +429,13 @@ class TestFormattersIntegration:
             # JSON formatting
             json_result = format_json(aggregated)
             parsed = json.loads(json_result)
-            assert parsed["total"] == 2
-            assert len(parsed["products"]) == 2
+            if not (parsed["total"] == 2):
+                raise AssertionError
+            if not (len(parsed["products"]) == 2):
+                raise AssertionError
 
             # XML formatting
             xml_result = format_xml(aggregated)
             root = ET.fromstring(xml_result)
-            assert root.find("total").text == "2"
+            if not (root.find("total").text == "2"):
+                raise AssertionError

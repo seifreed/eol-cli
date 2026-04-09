@@ -1,7 +1,5 @@
 """Tests for API client and CLI edge cases and error scenarios."""
 
-from io import StringIO
-
 import pytest
 from click.testing import CliRunner
 
@@ -9,7 +7,6 @@ from eol_cli.api.client import EOLAPIError, EOLClient, EOLNotFoundError, EOLRate
 from eol_cli.cli import main
 from eol_cli.commands.categories import categories
 from eol_cli.commands.identifiers import identifiers
-from eol_cli.commands.index import index
 from eol_cli.commands.products import products
 from eol_cli.commands.tags import tags
 from eol_cli.formatters.rich_formatter import format_product_details, format_release_details
@@ -23,14 +20,18 @@ class TestAPIErrorScenarios:
         # This would require mocking or triggering rate limit,
         # but we'll test the exception class
         error = EOLRateLimitError("Rate limit exceeded")
-        assert "Rate limit exceeded" in str(error)
-        assert isinstance(error, EOLAPIError)
+        if "Rate limit exceeded" not in str(error):
+            raise AssertionError
+        if not (isinstance(error, EOLAPIError)):
+            raise AssertionError
 
     def test_api_error_message(self):
         """Test EOLAPIError message."""
         error = EOLAPIError("Test error message")
-        assert "Test error message" in str(error)
-        assert isinstance(error, Exception)
+        if "Test error message" not in str(error):
+            raise AssertionError
+        if not (isinstance(error, Exception)):
+            raise AssertionError
 
     @pytest.mark.api
     def test_client_request_method_error_handling(self):
@@ -49,37 +50,47 @@ class TestCLIErrorHandling:
         """Test error message when category not found."""
         runner = CliRunner()
         result = runner.invoke(categories, ["get", "nonexistent-category"], obj=client_obj)
-        assert result.exit_code == 1
-        assert "not found" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "not found" not in result.output.lower():
+            raise AssertionError
 
     def test_tags_get_not_found_error_message(self, client_obj):
         """Test error message when tag not found."""
         runner = CliRunner()
         result = runner.invoke(tags, ["get", "nonexistent-tag"], obj=client_obj)
-        assert result.exit_code == 1
-        assert "not found" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "not found" not in result.output.lower():
+            raise AssertionError
 
     def test_identifiers_get_not_found_error_message(self, client_obj):
         """Test error message when identifier type not found."""
         runner = CliRunner()
         result = runner.invoke(identifiers, ["get", "nonexistent-type"], obj=client_obj)
-        assert result.exit_code == 1
-        assert "not found" in result.output.lower()
+        if not (result.exit_code == 1):
+            raise AssertionError
+        if "not found" not in result.output.lower():
+            raise AssertionError
 
     def test_products_list_help_output(self):
         """Test products list help shows expected content."""
         runner = CliRunner()
         result = runner.invoke(main, ["products", "list", "--help"])
-        assert result.exit_code == 0
-        assert "list" in result.output.lower()
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if "list" not in result.output.lower():
+            raise AssertionError
 
     def test_products_get_multiple_all_invalid(self, client_obj):
         """Test products get when all products are invalid."""
         runner = CliRunner()
         result = runner.invoke(products, ["get", "invalid1,invalid2,invalid3"], obj=client_obj)
-        assert result.exit_code == 1
+        if not (result.exit_code == 1):
+            raise AssertionError
         # Should show warnings for all invalid products
-        assert "invalid1" in result.output or "Warning" in result.output
+        if not ("invalid1" in result.output or "Warning" in result.output):
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -101,7 +112,8 @@ class TestEdgeCasesFormatters:
         }
         buf, c = make_console()
         format_product_details(data, show_all=True, console=c)
-        assert len(buf.getvalue()) > 0
+        if not (len(buf.getvalue()) > 0):
+            raise AssertionError
 
     def test_rich_formatter_with_none_dates(self, make_console):
         """Test rich formatter with None dates."""
@@ -116,7 +128,8 @@ class TestEdgeCasesFormatters:
         }
         buf, c = make_console()
         format_release_details(data, console=c)
-        assert len(buf.getvalue()) > 0
+        if not (len(buf.getvalue()) > 0):
+            raise AssertionError
 
     def test_rich_formatter_with_support_dates(self, make_console):
         """Test rich formatter with support and discontinuedFrom dates."""
@@ -124,7 +137,8 @@ class TestEdgeCasesFormatters:
             data = client.get_product_release("python", "3.11")
             buf, c = make_console()
             format_release_details(data, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_rich_formatter_product_with_all_fields(self, make_console):
         """Test rich formatter with product having all possible fields."""
@@ -132,7 +146,8 @@ class TestEdgeCasesFormatters:
             data = client.get_product("python")
             buf, c = make_console()
             format_product_details(data, show_all=True, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
 
 @pytest.mark.api
@@ -143,22 +158,29 @@ class TestCLIOptionsValidation:
         """Test products list --full with JSON output."""
         runner = CliRunner()
         result = runner.invoke(products, ["list", "--full", "--json"], obj=client_obj)
-        assert result.exit_code == 0
-        assert "releases" in result.output
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if "releases" not in result.output:
+            raise AssertionError
 
     def test_products_get_all_with_json(self, client_obj):
         """Test products get --all with JSON output."""
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python", "--all", "--json"], obj=client_obj)
-        assert result.exit_code == 0
-        assert "python" in result.output
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if "python" not in result.output:
+            raise AssertionError
 
     def test_products_get_all_with_xml(self, client_obj):
         """Test products get --all with XML output."""
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python", "--all", "--xml"], obj=client_obj)
-        assert result.exit_code == 0
-        assert "<response>" in result.output
+        if not (result.exit_code == 0):
+            raise AssertionError
+        if "<response>" not in result.output:
+            raise AssertionError
+
 
 @pytest.mark.api
 class TestAPIClientEdgeCases:
@@ -175,7 +197,8 @@ class TestAPIClientEdgeCases:
         with EOLClient() as client:
             # Test with product that has dash in name
             data = client.get_product("alpine-linux")
-            assert data["result"]["name"] == "alpine-linux"
+            if not (data["result"]["name"] == "alpine-linux"):
+                raise AssertionError
 
 
 @pytest.mark.api
@@ -187,14 +210,16 @@ class TestComplexScenarios:
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python, nodejs, ruby"], obj=client_obj)
         # Should handle spaces and work correctly
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
     def test_products_get_duplicate_names(self, client_obj):
         """Test products get with duplicate product names."""
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python,python,nodejs"], obj=client_obj)
         # Should handle duplicates gracefully
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
     def test_products_get_empty_string(self, client_obj):
         """Test products get with empty string after split.
@@ -203,7 +228,8 @@ class TestComplexScenarios:
         """
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python,,nodejs"], obj=client_obj)
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
     def test_full_cli_workflow(self):
         """Test complete CLI workflow."""
@@ -211,23 +237,28 @@ class TestComplexScenarios:
 
         # 1. List all products
         result1 = runner.invoke(main, ["products", "list"])
-        assert result1.exit_code == 0
+        if not (result1.exit_code == 0):
+            raise AssertionError
 
         # 2. Get specific product
         result2 = runner.invoke(main, ["products", "get", "python"])
-        assert result2.exit_code == 0
+        if not (result2.exit_code == 0):
+            raise AssertionError
 
         # 3. Get release info
         result3 = runner.invoke(main, ["products", "release", "python", "latest"])
-        assert result3.exit_code == 0
+        if not (result3.exit_code == 0):
+            raise AssertionError
 
         # 4. List categories
         result4 = runner.invoke(main, ["categories", "list"])
-        assert result4.exit_code == 0
+        if not (result4.exit_code == 0):
+            raise AssertionError
 
         # 5. Get tags
         result5 = runner.invoke(main, ["tags", "list"])
-        assert result5.exit_code == 0
+        if not (result5.exit_code == 0):
+            raise AssertionError
 
 
 class TestFormatterHelpers:
@@ -238,20 +269,24 @@ class TestFormatterHelpers:
         from eol_cli.formatters.rich_formatter import _format_date
 
         result = _format_date("")
-        assert result is not None
+        if not (result is not None):
+            raise AssertionError
 
     def test_format_boolean_edge_cases(self):
         """Test _format_boolean with various inputs."""
         from eol_cli.formatters.rich_formatter import _format_boolean
 
         result_true = _format_boolean(True)
-        assert "Yes" in result_true
+        if "Yes" not in result_true:
+            raise AssertionError
 
         result_false = _format_boolean(False)
-        assert "No" in result_false
+        if "No" not in result_false:
+            raise AssertionError
 
         result_custom = _format_boolean(True, "Active", "Inactive")
-        assert "Active" in result_custom
+        if "Active" not in result_custom:
+            raise AssertionError
 
     def test_format_eol_status_various_states(self):
         """Test _format_eol_status with various states."""
@@ -259,23 +294,28 @@ class TestFormatterHelpers:
 
         # EOL with date
         result1 = _format_eol_status(True, "2020-01-01")
-        assert result1 is not None
+        if not (result1 is not None):
+            raise AssertionError
 
         # EOL with None date
         result2 = _format_eol_status(True, None)
-        assert result2 is not None
+        if not (result2 is not None):
+            raise AssertionError
 
         # Not EOL with future date
         result3 = _format_eol_status(False, "2030-01-01")
-        assert result3 is not None
+        if not (result3 is not None):
+            raise AssertionError
 
         # Not EOL with None date
         result4 = _format_eol_status(False, None)
-        assert result4 is not None
+        if not (result4 is not None):
+            raise AssertionError
 
         # Not EOL with past date
         result5 = _format_eol_status(False, "2020-01-01")
-        assert result5 is not None
+        if not (result5 is not None):
+            raise AssertionError
 
 
 class TestNullValueHandling:
@@ -297,7 +337,8 @@ class TestNullValueHandling:
         # Should not raise TypeError
         format_product_details(data, show_all=True, console=c)
         output = buf.getvalue()
-        assert "N/A" in output
+        if "N/A" not in output:
+            raise AssertionError
 
     def test_rich_formatter_product_with_null_aliases(self, make_console):
         """Test rich formatter with null aliases value."""
@@ -315,7 +356,8 @@ class TestNullValueHandling:
         # Should not raise TypeError
         format_product_details(data, show_all=True, console=c)
         output = buf.getvalue()
-        assert "None" in output
+        if "N/A" not in output:
+            raise AssertionError
 
     def test_rich_formatter_product_list_with_null_tags(self, make_console):
         """Test product list formatter with null tags."""
@@ -336,7 +378,8 @@ class TestNullValueHandling:
         buf, c = make_console()
         # Should not raise TypeError
         format_product_list(data, console=c)
-        assert len(buf.getvalue()) > 0
+        if not (len(buf.getvalue()) > 0):
+            raise AssertionError
 
     def test_rich_formatter_identifier_with_null_product(self, make_console):
         """Test identifier formatter with null product."""
@@ -355,7 +398,8 @@ class TestNullValueHandling:
         # Should not raise AttributeError
         format_identifier_list(data, console=c)
         output = buf.getvalue()
-        assert "N/A" in output
+        if "N/A" not in output:
+            raise AssertionError
 
     def test_rich_formatter_identifier_with_null_product_name(self, make_console):
         """Test identifier formatter with product having null name."""
@@ -374,7 +418,8 @@ class TestNullValueHandling:
         # Should not raise TypeError in join
         format_identifier_list(data, console=c)
         output = buf.getvalue()
-        assert "N/A" in output
+        if "N/A" not in output:
+            raise AssertionError
 
     def test_sarif_formatter_with_null_eolFrom(self):
         """Test SARIF formatter with null eolFrom value."""
@@ -390,9 +435,11 @@ class TestNullValueHandling:
         }
         # Should not show "EOL scheduled: None"
         sarif = format_sarif(data)
-        assert "None" not in sarif or '"N/A"' in sarif
+        if not ("None" not in sarif or '"N/A"' in sarif):
+            raise AssertionError
         # Message should not contain "EOL scheduled: None"
-        assert "EOL scheduled: None" not in sarif
+        if not ("EOL scheduled: None" not in sarif):
+            raise AssertionError
 
     def test_sarif_formatter_eol_with_null_eolFrom(self):
         """Test SARIF formatter for EOL release with null eolFrom."""
@@ -407,7 +454,8 @@ class TestNullValueHandling:
         }
         sarif = format_sarif(data)
         # Should handle gracefully
-        assert '"N/A"' in sarif or "End of Life" in sarif
+        if not ('"N/A"' in sarif or "End of Life" in sarif):
+            raise AssertionError
 
     def test_sarif_formatter_with_null_properties(self):
         """Test SARIF formatter with null values in properties."""
@@ -426,11 +474,17 @@ class TestNullValueHandling:
         # Should not raise any errors and should produce valid JSON
         sarif = format_sarif(data)
         import json
+
         parsed = json.loads(sarif)
-        assert parsed is not None
+        if not (parsed is not None):
+            raise AssertionError
         # Properties should have empty strings instead of null
         props = parsed["runs"][0]["results"][0]["properties"]
-        assert props["releaseDate"] == ""
-        assert props["eolFrom"] == ""
-        assert props["isMaintained"] is False
-        assert props["isLts"] is False
+        if not (props["releaseDate"] == ""):
+            raise AssertionError
+        if not (props["eolFrom"] == ""):
+            raise AssertionError
+        if props["isMaintained"] is not False:
+            raise AssertionError
+        if props["isLts"] is not False:
+            raise AssertionError

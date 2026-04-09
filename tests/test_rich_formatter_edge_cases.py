@@ -18,25 +18,36 @@ class TestRichFormatterEmptyCases:
         data = {"result": {}}
         buf, c = make_console()
         rich_formatter.format_product_details(data, show_all=False, console=c)
-        assert "No data found" in buf.getvalue()
+        if "No data found" not in buf.getvalue():
+            raise AssertionError
+
+    def test_format_product_details_no_releases_prints_notice(self, make_console):
+        data = {"result": {"name": "test-product", "label": "Test Product", "releases": []}}
+        buf, c = make_console()
+        rich_formatter.format_product_details(data, show_all=False, console=c)
+        if "No release cycles found" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_release_details_empty_result(self, make_console):
         data = {"result": {}}
         buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
-        assert "No data found" in buf.getvalue()
+        if "No data found" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_product_list_empty_result(self, make_console):
         data = {"result": [], "total": 0}
         buf, c = make_console()
         rich_formatter.format_product_list(data, full=False, console=c)
-        assert "No products found" in buf.getvalue()
+        if "No products found" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_identifier_list_empty_result(self, make_console):
         data = {"result": [], "total": 0}
         buf, c = make_console()
         rich_formatter.format_identifier_list(data, console=c)
-        assert "No identifiers found" in buf.getvalue()
+        if "No identifiers found" not in buf.getvalue():
+            raise AssertionError
 
 
 class TestRichFormatterLatestVersionDict:
@@ -64,7 +75,8 @@ class TestRichFormatterLatestVersionDict:
 
         buf, c = make_console()
         rich_formatter.format_product_details(data, show_all=False, console=c)
-        assert "1.0.5" in buf.getvalue()
+        if "1.0.5" not in buf.getvalue():
+            raise AssertionError
 
 
 class TestRichFormatterOptionalFields:
@@ -85,7 +97,8 @@ class TestRichFormatterOptionalFields:
         }
         buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
-        assert "Jammy Jellyfish" in buf.getvalue()
+        if "Jammy Jellyfish" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_release_details_with_lts_from(self, make_console):
         data = {
@@ -101,7 +114,8 @@ class TestRichFormatterOptionalFields:
         }
         buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
-        assert "2024-06-01" in buf.getvalue()
+        if "2024-06-01" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_release_details_with_eoes(self, make_console):
         data = {
@@ -118,7 +132,8 @@ class TestRichFormatterOptionalFields:
         }
         buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
-        assert "2026-01-01" in buf.getvalue()
+        if "2026-01-01" not in buf.getvalue():
+            raise AssertionError
 
     def test_format_release_details_with_discontinued(self, make_console):
         data = {
@@ -135,7 +150,8 @@ class TestRichFormatterOptionalFields:
         }
         buf, c = make_console()
         rich_formatter.format_release_details(data, console=c)
-        assert "2023-06-01" in buf.getvalue()
+        if "2023-06-01" not in buf.getvalue():
+            raise AssertionError
 
 
 class TestRichFormatterDateEdgeCases:
@@ -143,11 +159,50 @@ class TestRichFormatterDateEdgeCases:
 
     def test_format_date_with_invalid_format(self):
         result = rich_formatter._format_date("not-a-date")
-        assert "not-a-date" in result
+        if "not-a-date" not in result:
+            raise AssertionError
 
     def test_format_date_with_empty_string(self):
         result = rich_formatter._format_date("")
-        assert result is not None
+        if not (result is not None):
+            raise AssertionError
+
+
+class TestRichFormatterEOLStatus:
+    """Test EOL status formatting edge cases."""
+
+    def test_format_eol_status_eol_with_date(self):
+        """Test EOL status when product is EOL with a date."""
+        result = rich_formatter._format_eol_status(True, "2020-01-01")
+        if "EOL" not in result:
+            raise AssertionError
+        if "2020-01-01" not in result:
+            raise AssertionError
+
+    def test_format_eol_status_eol_without_date(self):
+        """Test EOL status when product is EOL but no date provided."""
+        result = rich_formatter._format_eol_status(True, None)
+        if "EOL" not in result:
+            raise AssertionError
+        # Simplified output: EOL without date shows just "[red]EOL[/red]"
+        if not ("[red]EOL[/red]" == result):
+            raise AssertionError
+
+    def test_format_eol_status_active_with_date(self):
+        """Test EOL status when product is active with EOL date."""
+        result = rich_formatter._format_eol_status(False, "2030-01-01")
+        if "Active" not in result:
+            raise AssertionError
+        if "EOL: 2030-01-01" not in result:
+            raise AssertionError
+
+    def test_format_eol_status_active_without_date(self):
+        """Test EOL status when product is active but no EOL date scheduled."""
+        result = rich_formatter._format_eol_status(False, None)
+        if "Active" not in result:
+            raise AssertionError
+        if "no EOL date scheduled" not in result:
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -179,22 +234,26 @@ class TestCLICommandsEdgeCases:
         """Whitespace around commas is stripped — behaves as 'python,nodejs'."""
         runner = CliRunner()
         result = runner.invoke(products, ["get", " python , nodejs "], obj=client_obj)
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
     def test_categories_get_with_valid_category(self, client_obj):
         runner = CliRunner()
         result = runner.invoke(categories, ["get", "os"], obj=client_obj)
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
     def test_tags_get_with_valid_tag(self, client_obj):
         runner = CliRunner()
         result = runner.invoke(tags, ["get", "linux-distribution"], obj=client_obj)
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
     def test_identifiers_get_with_valid_type(self, client_obj):
         runner = CliRunner()
         result = runner.invoke(identifiers, ["get", "purl"], obj=client_obj)
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -204,12 +263,16 @@ class TestProductsCommandEdgeCases:
     def test_products_get_multiple_with_one_valid_one_invalid(self, client_obj):
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python,invalid-product-xyz"], obj=client_obj)
-        assert "python" in result.output.lower() or "warning" in result.output.lower()
+        if not ("python" in result.output.lower() or "warning" in result.output.lower()):
+            raise AssertionError
 
     def test_products_release_invalid_in_json_mode(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(products, ["release", "invalid-xyz", "latest", "--json"], obj=client_obj)
-        assert result.exit_code == 1
+        result = runner.invoke(
+            products, ["release", "invalid-xyz", "latest", "--json"], obj=client_obj
+        )
+        if not (result.exit_code == 1):
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -232,7 +295,8 @@ class TestCLIMainFunction:
 
         runner = CliRunner()
         result = runner.invoke(main, ["invalid-command"])
-        assert result.exit_code != 0
+        if not (result.exit_code != 0):
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -244,7 +308,8 @@ class TestFormatterComplexScenarios:
             data = client.get_product("ubuntu")
             buf, c = make_console()
             rich_formatter.format_product_details(data, show_all=False, console=c)
-            assert len(buf.getvalue()) > 0
+            if not (len(buf.getvalue()) > 0):
+                raise AssertionError
 
     def test_product_with_empty_links_and_identifiers(self, make_console):
         data = {
@@ -269,6 +334,5 @@ class TestFormatterComplexScenarios:
         }
         buf, c = make_console()
         rich_formatter.format_product_details(data, show_all=True, console=c)
-        assert "Test" in buf.getvalue()
-
-
+        if "Test" not in buf.getvalue():
+            raise AssertionError

@@ -15,31 +15,45 @@ class TestSARIFDocumentStructure:
     def test_minimal_sarif_structure(self):
         data = {"result": []}
         output = json.loads(format_sarif(data))
-        assert output["version"] == "2.1.0"
-        assert "$schema" in output
-        assert "oasis-open.org" in output["$schema"]
-        assert len(output["runs"]) == 1
-        assert "tool" in output["runs"][0]
-        assert "results" in output["runs"][0]
+        if not (output["version"] == "2.1.0"):
+            raise AssertionError
+        if "$schema" not in output:
+            raise AssertionError
+        if "oasis-open.org" not in output["$schema"]:
+            raise AssertionError
+        if not (len(output["runs"]) == 1):
+            raise AssertionError
+        if "tool" not in output["runs"][0]:
+            raise AssertionError
+        if "results" not in output["runs"][0]:
+            raise AssertionError
 
     def test_tool_descriptor(self):
         data = {"result": []}
         output = json.loads(format_sarif(data))
         driver = output["runs"][0]["tool"]["driver"]
-        assert driver["name"] == "eol-cli"
-        assert "version" in driver
-        assert "informationUri" in driver
-        assert len(driver["rules"]) == 2
+        if not (driver["name"] == "eol-cli"):
+            raise AssertionError
+        if "version" not in driver:
+            raise AssertionError
+        if "informationUri" not in driver:
+            raise AssertionError
+        if not (len(driver["rules"]) == 2):
+            raise AssertionError
 
     def test_rules_have_required_fields(self):
         data = {"result": []}
         output = json.loads(format_sarif(data))
         rules = output["runs"][0]["tool"]["driver"]["rules"]
         for rule in rules:
-            assert "id" in rule
-            assert "name" in rule
-            assert "shortDescription" in rule
-            assert "text" in rule["shortDescription"]
+            if "id" not in rule:
+                raise AssertionError
+            if "name" not in rule:
+                raise AssertionError
+            if "shortDescription" not in rule:
+                raise AssertionError
+            if "text" not in rule["shortDescription"]:
+                raise AssertionError
 
 
 class TestSARIFProductResults:
@@ -64,11 +78,16 @@ class TestSARIFProductResults:
         }
         output = json.loads(format_sarif(data))
         results = output["runs"][0]["results"]
-        assert len(results) == 1
-        assert results[0]["level"] == "error"
-        assert results[0]["ruleId"] == "EOL001"
-        assert "End of Life" in results[0]["message"]["text"]
-        assert "python 3.8" in results[0]["message"]["text"]
+        if not (len(results) == 1):
+            raise AssertionError
+        if not (results[0]["level"] == "error"):
+            raise AssertionError
+        if not (results[0]["ruleId"] == "EOL001"):
+            raise AssertionError
+        if "End of Life" not in results[0]["message"]["text"]:
+            raise AssertionError
+        if "python 3.8" not in results[0]["message"]["text"]:
+            raise AssertionError
 
     def test_active_release_produces_note(self):
         data = {
@@ -89,10 +108,14 @@ class TestSARIFProductResults:
         }
         output = json.loads(format_sarif(data))
         results = output["runs"][0]["results"]
-        assert len(results) == 1
-        assert results[0]["level"] == "note"
-        assert results[0]["ruleId"] == "EOL002"
-        assert "Active" in results[0]["message"]["text"]
+        if not (len(results) == 1):
+            raise AssertionError
+        if not (results[0]["level"] == "note"):
+            raise AssertionError
+        if not (results[0]["ruleId"] == "EOL002"):
+            raise AssertionError
+        if "Active" not in results[0]["message"]["text"]:
+            raise AssertionError
 
     def test_multiple_releases_produce_multiple_results(self):
         data = {
@@ -106,9 +129,11 @@ class TestSARIFProductResults:
         }
         output = json.loads(format_sarif(data))
         results = output["runs"][0]["results"]
-        assert len(results) == 2
+        if not (len(results) == 2):
+            raise AssertionError
         levels = {r["level"] for r in results}
-        assert levels == {"error", "note"}
+        if not (levels == {"error", "note"}):
+            raise AssertionError
 
     def test_result_properties_contain_release_metadata(self):
         data = {
@@ -128,11 +153,16 @@ class TestSARIFProductResults:
         }
         output = json.loads(format_sarif(data))
         props = output["runs"][0]["results"][0]["properties"]
-        assert props["product"] == "python"
-        assert props["release"] == "3.12"
-        assert props["releaseDate"] == "2023-10-02"
-        assert props["isEol"] is False
-        assert props["isLts"] is False
+        if not (props["product"] == "python"):
+            raise AssertionError
+        if not (props["release"] == "3.12"):
+            raise AssertionError
+        if not (props["releaseDate"] == "2023-10-02"):
+            raise AssertionError
+        if props["isEol"] is not False:
+            raise AssertionError
+        if props["isLts"] is not False:
+            raise AssertionError
 
 
 class TestSARIFMultiProduct:
@@ -158,9 +188,11 @@ class TestSARIFMultiProduct:
         }
         output = json.loads(format_sarif(data))
         results = output["runs"][0]["results"]
-        assert len(results) == 2
+        if not (len(results) == 2):
+            raise AssertionError
         products_in_results = {r["properties"]["product"] for r in results}
-        assert products_in_results == {"python", "nodejs"}
+        if not (products_in_results == {"python", "nodejs"}):
+            raise AssertionError
 
 
 class TestSARIFSingleRelease:
@@ -180,12 +212,16 @@ class TestSARIFSingleRelease:
         }
         output = json.loads(format_sarif(data))
         results = output["runs"][0]["results"]
-        assert len(results) == 1
-        assert results[0]["level"] == "note"
+        if not (len(results) == 1):
+            raise AssertionError
+        if not (results[0]["level"] == "note"):
+            raise AssertionError
         msg = results[0]["message"]["text"]
-        assert "3.11: Active" in msg
+        if "3.11: Active" not in msg:
+            raise AssertionError
         # Should NOT duplicate: "3.11 3.11: Active"
-        assert "3.11 3.11" not in msg
+        if not ("3.11 3.11" not in msg):
+            raise AssertionError
 
 
 class TestSARIFListResponses:
@@ -200,13 +236,36 @@ class TestSARIFListResponses:
         }
         output = json.loads(format_sarif(data))
         results = output["runs"][0]["results"]
-        assert len(results) == 2
-        assert all(r["level"] == "note" for r in results)
+        if not (len(results) == 2):
+            raise AssertionError
+        if not (all(r["level"] == "note" for r in results)):
+            raise AssertionError
+
+    def test_uri_list_with_non_dict_entries(self):
+        data = {
+            "result": [
+                {"name": "products", "uri": "/api/v1/products"},
+                "tag:legacy",
+                42,
+                None,
+            ]
+        }
+        output = json.loads(format_sarif(data))
+        results = output["runs"][0]["results"]
+        if not (len(results) == 4):
+            raise AssertionError
+        if not (results[1]["message"]["text"].startswith("Item:")):
+            raise AssertionError
+        if not (results[2]["message"]["text"] == "Item: 42"):
+            raise AssertionError
+        if results[3]["properties"]["value"] is not None:
+            raise AssertionError
 
     def test_empty_result(self):
         data = {"result": []}
         output = json.loads(format_sarif(data))
-        assert output["runs"][0]["results"] == []
+        if not (output["runs"][0]["results"] == []):
+            raise AssertionError
 
 
 class TestSARIFOutputValid:
@@ -216,13 +275,15 @@ class TestSARIFOutputValid:
         data = {"result": {"name": "test", "releases": []}}
         output = format_sarif(data)
         parsed = json.loads(output)
-        assert isinstance(parsed, dict)
+        if not (isinstance(parsed, dict)):
+            raise AssertionError
 
     def test_unrecognized_data_produces_empty_results(self):
         """Data that doesn't match any known shape returns no results."""
         data = {"result": "just a string"}
         output = json.loads(format_sarif(data))
-        assert output["runs"][0]["results"] == []
+        if not (output["runs"][0]["results"] == []):
+            raise AssertionError
 
 
 @pytest.mark.api
@@ -232,24 +293,27 @@ class TestSARIFCLIIntegration:
     def test_products_get_sarif(self, client_obj):
         runner = CliRunner()
         result = runner.invoke(products, ["get", "python", "--sarif"], obj=client_obj)
-        assert result.exit_code == 0
+        if not (result.exit_code == 0):
+            raise AssertionError
         sarif = json.loads(result.output)
-        assert sarif["version"] == "2.1.0"
-        assert len(sarif["runs"][0]["results"]) > 0
+        if not (sarif["version"] == "2.1.0"):
+            raise AssertionError
+        if not (len(sarif["runs"][0]["results"]) > 0):
+            raise AssertionError
 
     def test_products_release_sarif(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(
-            products, ["release", "python", "3.11", "--sarif"], obj=client_obj
-        )
-        assert result.exit_code == 0
+        result = runner.invoke(products, ["release", "python", "3.11", "--sarif"], obj=client_obj)
+        if not (result.exit_code == 0):
+            raise AssertionError
         sarif = json.loads(result.output)
-        assert len(sarif["runs"][0]["results"]) == 1
+        if not (len(sarif["runs"][0]["results"]) == 1):
+            raise AssertionError
 
     def test_sarif_json_mutually_exclusive(self, client_obj):
         runner = CliRunner()
-        result = runner.invoke(
-            products, ["get", "python", "--sarif", "--json"], obj=client_obj
-        )
-        assert result.exit_code == 2
-        assert "mutually exclusive" in result.output.lower()
+        result = runner.invoke(products, ["get", "python", "--sarif", "--json"], obj=client_obj)
+        if not (result.exit_code == 2):
+            raise AssertionError
+        if "mutually exclusive" not in result.output.lower():
+            raise AssertionError

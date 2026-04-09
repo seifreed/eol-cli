@@ -6,6 +6,7 @@ import click
 import pytest
 
 from eol_cli.commands._output import emit, validate_format_options
+from eol_cli.presentation.responses import ApiResponse
 
 
 class TestValidateFormatOptions:
@@ -44,31 +45,41 @@ class TestEmit:
     """Test emit function dispatch."""
 
     def test_emit_json(self, capsys):
-        data = {"key": "value"}
+        data = {"schema_version": "1.2.0", "result": {"key": "value"}}
         rich_fn = MagicMock()
         emit(data, output_json=True, output_xml=False, rich_fn=rich_fn)
         captured = capsys.readouterr()
-        assert '"key"' in captured.out
+        if '"key"' not in captured.out:
+            raise AssertionError
         rich_fn.assert_not_called()
 
     def test_emit_xml(self, capsys):
-        data = {"key": "value"}
+        data = {"schema_version": "1.2.0", "result": {"key": "value"}}
         rich_fn = MagicMock()
         emit(data, output_json=False, output_xml=True, rich_fn=rich_fn)
         captured = capsys.readouterr()
-        assert "<key>" in captured.out
+        if "<key>" not in captured.out:
+            raise AssertionError
         rich_fn.assert_not_called()
 
     def test_emit_sarif(self, capsys):
-        data = {"result": []}
+        data = {"schema_version": "1.2.0", "result": []}
         rich_fn = MagicMock()
         emit(data, output_json=False, output_xml=False, rich_fn=rich_fn, output_sarif=True)
         captured = capsys.readouterr()
-        assert '"version": "2.1.0"' in captured.out
+        if '"version": "2.1.0"' not in captured.out:
+            raise AssertionError
         rich_fn.assert_not_called()
 
     def test_emit_rich_calls_rich_fn(self):
         rich_fn = MagicMock()
-        data = {"key": "value"}
+        data = {"schema_version": "1.2.0", "result": {"key": "value"}}
         emit(data, output_json=False, output_xml=False, rich_fn=rich_fn, extra="kwarg")
+
         rich_fn.assert_called_once_with(data, extra="kwarg")
+
+    def test_emit_rejects_non_dict_payload(self):
+        data = ApiResponse.from_payload({"schema_version": "1.2.0", "result": {"key": "value"}})
+
+        with pytest.raises(TypeError, match="dictionary payload"):
+            emit(data, output_json=False, output_xml=False, rich_fn=MagicMock())
