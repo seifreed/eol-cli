@@ -207,8 +207,8 @@ eol-cli products get ubuntu --sarif
 Releases are published from version tags.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 That workflow:
@@ -216,7 +216,7 @@ That workflow:
 - Publishes to PyPI with GitHub Actions OIDC trusted publishing
 - Uploads the built files to the GitHub Release assets
 
-Before using the first release, configure PyPI trusted publishing for this repository:
+Before publishing tag-based releases, configure PyPI trusted publishing for this repository:
 - Owner: `seifreed`
 - Repository: `eol-cli`
 - Workflow file: `publish.yml`
