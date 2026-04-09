@@ -1,5 +1,6 @@
 """Tests for CLI command error handling including API errors, validation errors, and exception paths."""
 
+import importlib
 import json
 from unittest.mock import MagicMock, patch
 
@@ -411,8 +412,10 @@ class TestProductsReleaseErrorPath:
             "schema_version": "1.2.0",
             "result": {"name": "p", "releases": []},
         }
-        with patch(
-            "eol_cli.commands.products._output_rich_format",
+        products_module = importlib.import_module("eol_cli.commands.products")
+        with patch.object(
+            products_module,
+            "_output_rich_format",
             side_effect=EOLAPIError("Unexpected render error"),
         ):
             result = runner.invoke(products, ["get", "python"], obj=obj)

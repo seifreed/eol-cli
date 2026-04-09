@@ -188,3 +188,6 @@ MANIFEST.in.backup
 docs/build/
 site/
 
+# Claude instructions and local agent notes
+CLAUDE.md
+.claude/
