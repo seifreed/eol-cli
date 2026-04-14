@@ -26,7 +26,7 @@ platformdirs==4.5.0
 pluggy==1.6.0
 Pygments==2.20.0
 pyproject_hooks==1.2.0
-pytest==9.0.1
+pytest==9.0.3
 pytest-cov==7.0.0
 pytokens==0.4.1
 readme_renderer==44.0
